@@ -1,0 +1,1097 @@
+================================================================================
+          TRADINGVIEW LIGHTWEIGHT CHARTS - COMPREHENSIVE DOCUMENTATION
+================================================================================
+
+Table of Contents:
+1. Overview & Introduction
+2. Installation & Setup
+3. Key Features
+4. Series Types
+5. API Reference (Main Functions & Interfaces)
+6. Plugins & Customization
+7. Framework Integrations (React, Vue, etc.)
+8. Interesting Projects & Examples
+9. Tutorials & How-To Guides
+10. Technical Indicators
+11. Version History & Release Notes
+12. Resources & Links
+
+================================================================================
+1. OVERVIEW & INTRODUCTION
+================================================================================
+
+TradingView Lightweight Charts is a high-performance, open-source JavaScript 
+library for creating interactive financial charts. It is developed and 
+maintained by TradingView.
+
+Key Characteristics:
+- Size: Only ~35 KB (compressed)
+- Technology: HTML5 Canvas
+- License: Apache License 2.0
+- Languages: TypeScript (primary), JavaScript
+- Browser Support: ES2020+ compatible browsers
+
+Official Website: https://www.tradingview.com/lightweight-charts/
+GitHub Repository: https://github.com/tradingview/lightweight-charts
+NPM Package: https://www.npmjs.com/package/lightweight-charts
+Documentation: https://tradingview.github.io/lightweight-charts/
+
+Current Version: 5.1.0 (as of 2025/2026)
+GitHub Stats: ~13,940 stars, ~2,177 forks
+
+ATTRIBUTION REQUIREMENT:
+The license requires specifying TradingView as the product creator. Add:
+- Attribution notice from the NOTICE file on GitHub
+- Link to https://www.tradingview.com
+
+================================================================================
+2. INSTALLATION & SETUP
+================================================================================
+
+NPM Installation:
+----------------
+npm install --save lightweight-charts
+
+Yarn Installation:
+-----------------
+yarn add lightweight-charts
+
+CDN (via unpkg):
+----------------
+<script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+
+CDN (via jsDelivr):
+-------------------
+<script src="https://cdn.jsdelivr.net/npm/lightweight-charts@5.1.0/dist/lightweight-charts.standalone.production.js"></script>
+
+Build Variants:
+---------------
+The library ships with multiple build variants:
+
+Dependencies included | Mode   | ES Module                          | IIFE (window.LightweightCharts)
+---------------------|--------|------------------------------------|--------------------------------
+No                   | PROD   | lightweight-charts.production.mjs | N/A
+No                   | DEV    | lightweight-charts.development.mjs| N/A
+Yes (standalone)      | PROD   | lightweight-charts.standalone.production.mjs | lightweight-charts.standalone.production.js
+Yes (standalone)     | DEV    | lightweight-charts.standalone.development.mjs | lightweight-charts.standalone.development.js
+
+Requirements:
+- Client-side only (NOT designed for server-side/Node.js)
+- ES2020 language specification support required
+
+================================================================================
+3. KEY FEATURES
+================================================================================
+
+- Super Compact: Only ~35 KB, built with HTML5 Canvas technology
+- Streaming Updates: Real-time data display without page reload
+- Open Source: Maintained by TradingView with community contributions
+- Multiple Chart Types: Area, Bar, Baseline, Candlestick, Histogram, Line
+- Custom Series: Create your own series types via plugins
+- Cross-Platform: Works on iOS and Android
+- Framework Support: React, Vue.js, Web Components
+- Technical Indicators: Built-in support for 70+ indicators
+- Customization: Extensive options for colors, layouts, scales
+- Time Zones: Support for different time zone configurations
+- Panes: Multiple pane support for complex layouts
+- Accessibility: A11y support for improved accessibility
+
+================================================================================
+4. SERIES TYPES
+================================================================================
+
+4.1 AREA SERIES
+---------------
+Definition: AreaSeries
+Data Format: SingleValueData or WhitespaceData
+Description: Colored area between time scale and line connecting data points
+
+Example:
+const areaSeries = chart.addSeries(AreaSeries, {
+    lineColor: '#2962FF',
+    topColor: '#2962FF',
+    bottomColor: 'rgba(41, 98, 255, 0.28)'
+});
+
+4.2 BAR SERIES
+---------------
+Definition: BarSeries
+Data Format: BarData or WhitespaceData
+Description: Vertical bars showing price movements (high-low range)
+             Open/close shown as tick marks
+
+4.3 BASELINE SERIES
+-------------------
+Definition: BaselineSeries
+Data Format: SingleValueData or WhitespaceData
+Description: Two colored areas above/below a base value line
+
+Example:
+const baselineSeries = chart.addSeries(BaselineSeries, {
+    baseValue: { type: 'price', price: 25 },
+    topLineColor: 'rgba(38, 166, 154, 1)',
+    topFillColor1: 'rgba(38, 166, 154, 0.28)',
+    bottomLineColor: 'rgba(239, 83, 80, 1)',
+    bottomFillColor1: 'rgba(239, 83, 80, 0.28)'
+});
+
+4.4 CANDLESTICK SERIES
+----------------------
+Definition: CandlestickSeries
+Data Format: CandlestickData or WhitespaceData
+Description: Solid body (open-close), wicks (high-low)
+
+Example:
+const candlestickSeries = chart.addSeries(CandlestickSeries, {
+    upColor: '#26a69a',
+    downColor: '#ef5350',
+    borderVisible: false,
+    wickUpColor: '#26a69a',
+    wickDownColor: '#ef5350'
+});
+
+Data format: { time, open, high, low, close }
+
+4.5 HISTOGRAM SERIES
+--------------------
+Definition: HistogramSeries
+Data Format: HistogramData or WhitespaceData
+Description: Columns showing value distribution (can have individual colors)
+
+Example:
+const histogramSeries = chart.addSeries(HistogramSeries, {
+    color: '#26a69a'
+});
+
+4.6 LINE SERIES
+---------------
+Definition: LineSeries
+Data Format: LineData or WhitespaceData
+Description: Data points connected by straight line segments
+
+4.7 CUSTOM SERIES (PLUGINS)
+---------------------------
+Create custom series types by implementing ICustomSeriesPaneView interface.
+Use addCustomSeries() method to add to chart.
+
+================================================================================
+4B. CHART TYPES
+================================================================================
+
+Lightweight Charts offers different types of charts to suit various data 
+visualization needs.
+
+4B.1 STANDARD TIME-BASED CHART
+------------------------------
+- Creation method: createChart
+- Horizontal scale: Time-based
+- Use case: General-purpose charting for financial and time series data
+- Most common chart type
+
+4B.2 YIELD CURVE CHART
+-----------------------
+- Creation method: createYieldCurveChart
+- Horizontal scale: Linearly spaced, defined in monthly time duration units
+- Key differences:
+  * Whitespace is ignored for crosshair and grid lines
+  * Specialized for yield curve representation
+- Use case: Displaying yield curves, common in financial analysis
+
+Example:
+const chart = createYieldCurveChart(document.getElementById('container'), options);
+const curve = [
+    { time: 1, value: 5.378 },   // 1 month
+    { time: 2, value: 5.372 },   // 2 months
+    { time: 12, value: 4.739 },  // 1 year
+    { time: 60, value: 3.887 },  // 5 years
+    { time: 120, value: 4.007 }, // 10 years
+];
+
+4B.3 OPTIONS CHART (PRICE-BASED)
+--------------------------------
+- Creation method: createOptionsChart
+- Horizontal scale: Price-based (numeric)
+- Use case: Visualizing option chains, price distributions
+- Price is the primary x-axis metric instead of time
+
+Example:
+const chart = createOptionsChart(document.getElementById('container'), options);
+for (let i = 0; i < 1000; i++) {
+    data.push({
+        time: i * 0.25,  // Price values
+        value: Math.sin(i / 100) + i / 500,
+    });
+}
+
+4B.4 CUSTOM HORIZONTAL SCALE CHART
+-----------------------------------
+- Creation method: createChartEx
+- Horizontal scale: Custom-defined
+- Use case: Specialized charting needs with non-standard horizontal scales
+- Use with defaultHorzScaleBehavior for customization
+
+================================================================================
+4C. PRICE SCALE
+================================================================================
+
+The price scale (or price axis) is a vertical scale that maps prices to 
+coordinates and vice versa.
+
+CREATE PRICE SCALE:
+- By default, chart has two visible price scales: left and right
+- Can create unlimited overlay price scales (hidden in UI)
+- Overlay price scales allow series to be plotted without affecting existing scales
+- Useful for indicators like Volume with different values from price data
+
+MODIFY PRICE SCALE:
+- Left price scale: leftPriceScale option
+- Right price scale: rightPriceScale option
+- Overlay price scales: overlayPriceScales option
+
+REMOVE PRICE SCALE:
+- Default left/right scales cannot be removed, only hidden (visible: false)
+- Overlay price scale exists as long as at least one series is attached
+
+PRICE SCALE MODES:
+- Normal: Standard price display
+- Logarithmic: Logarithmic scale
+- Percentage: Percentage change from first point
+- Indexed: Indexed values
+
+================================================================================
+4D. TIME SCALE
+================================================================================
+
+The time scale (or time axis) is a horizontal scale displaying time of 
+data points at the bottom of the chart.
+
+TIME SCALE API:
+- Get time scale: chart.timeScale()
+- Methods: setVisibleRange, getVisibleRange, setVisibleLogicalRange, 
+           getVisibleLogicalRange, fitContent, resetTimeScale
+
+VISIBLE RANGE:
+- Data range: Includes values from first to last visible bar
+- Logical range: Continuous line of values with bar indices
+- Note: Cannot extrapolate time with setVisibleRange
+
+CHART MARGIN:
+- Space between chart borders and series
+- Controlled by barSpacing (default: 6) and rightOffset (default: 0)
+- Use fitContent() to auto-fit all data
+
+TIME FORMATS:
+- String: '2023-01-01' (yyyy-mm-dd)
+- Unix timestamp: 1640995200 (seconds)
+- BusinessDay: { year: 2023, month: 1, day: 1 }
+
+================================================================================
+4E. PANES (MULTI-PANE SUPPORT)
+================================================================================
+
+Version 5.0 introduced multi-pane support - one of the most requested features.
+
+FEATURES:
+- Full support for multiple panes within a single chart
+- Independent scale and series management per pane
+- Flexible pane sizing and arrangement options
+
+PANE API:
+- chart.panes(): Get array of pane APIs
+- chart.addPane(): Add new pane programmatically
+- pane.attachPrimitive(): Attach primitives to pane
+- pane.getHTMLElement(): Get pane's DOM element
+
+STRETCH FACTORS:
+- getStretchFactor(), setStretchFactor() for relative pane sizes
+
+================================================================================
+4F. PLUGINS SYSTEM
+================================================================================
+
+Version 4.1+ introduced plugins for extending functionality.
+
+PLUGIN TYPES:
+1. Custom Series - New series types with custom data/rendering
+2. Primitives:
+   - Series Primitives: Attached to specific series
+   - Pane Primitives: Attached to chart panes
+
+CREATE CUSTOM SERIES:
+class MyCustomSeries {
+    // Implement ICustomSeriesPaneView interface
+}
+const series = chart.addCustomSeries(new MyCustomSeries(), options);
+
+ATTACH PRIMITIVES:
+- Series: series.attachPrimitive(primitive)
+- Pane: pane.attachPrimitive(primitive)
+
+SCAFFOLDING:
+npm create lwc-plugin@latest
+
+================================================================================
+4G. COLORS & STYLING
+================================================================================
+
+ENHANCED COLOR SUPPORT (v5.0+):
+- Native support for sRGB-based colors
+- RGB, RGBA, hex, named colors, HSL
+- Support for expanded color gamuts (Display P3)
+- Custom color parser support
+
+COLOR TYPES:
+- ColorType.Solid: Solid colors
+- ColorType.Gradient: Gradient colors
+
+================================================================================
+4H. TIME ZONES
+================================================================================
+
+Lightweight Charts supports different time zone configurations.
+
+TIME ZONE OPTIONS:
+- Set time zone via LocalizationOptions
+- Supports UTC and custom time zones
+- Business day time zone handling
+
+================================================================================
+5. API REFERENCE (MAIN FUNCTIONS & INTERFACES)
+================================================================================
+
+5.1 CREATE CHART
+----------------
+import { createChart } from 'lightweight-charts';
+
+const chart = createChart(container, options);
+// container: DOM element
+// options: ChartOptions (optional)
+
+Returns: IChartApi object
+
+5.2 MAIN INTERFACES
+-------------------
+- IChartApi: Main interface for single chart (remove(), resize(), addSeries(), etc.)
+- ISeriesApi: Interface for series (setData(), update(), applyOptions(), etc.)
+- ITimeScaleApi: Time scale management (fitContent(), setVisibleRange(), etc.)
+- IPriceScaleApi: Price scale management
+
+5.3 KEY METHODS
+---------------
+// Chart methods
+chart.remove()                    // Remove chart and all DOM elements
+chart.resize(width, height)       // Resize chart
+chart.addSeries(SeriesType)       // Add new series
+chart.timeScale()                 // Get time scale API
+chart.panes()                     // Get pane APIs
+
+// Series methods
+series.setData(data)              // Set all data (replaces existing)
+series.update(data)               // Update last point or add new
+series.applyOptions(options)      // Apply new options
+series.priceScale()               // Get price scale API
+
+// Time scale methods
+timeScale.fitContent()            // Fit content to view
+timeScale.setVisibleRange(range)   // Set visible time range
+timeScale.subscribeVisibleRangeChange(callback)  // Subscribe to range changes
+
+5.4 ENUMERATIONS
+----------------
+- MarkerSign: arrowUp, arrowDown, circle, square, triangleUp
+- ColorType: Solid, Gradient
+- CrosshairMode: Normal, Magnet
+- LastPriceAnimationMode: Continuous, OnDataUpdate, Disabled
+- LineStyle: Solid, Dotted, Dashed, LargeDashed, SparseDotted
+- LineType: Simple, WithSteps
+- PriceScaleMode: Normal, Logarithmic, Percentage, Indexed
+
+5.5 DATA FORMATS
+----------------
+// SingleValueData (Area, Baseline, Line)
+{ time: '2023-01-01' | 1640995200, value: 123.45 }
+
+// CandlestickData
+{ time: '2023-01-01', open: 100, high: 110, low: 95, close: 105 }
+
+// BarData
+{ time: '2023-01-01', open: 100, high: 110, low: 95, close: 105 }
+
+// HistogramData
+{ time: '2023-01-01', value: 50, color: 'red' }
+
+// WhitespaceData (gaps)
+{ time: '2023-01-01' }
+
+Time formats: 
+- String: '2023-01-01' (yyyy-mm-dd)
+- Unix timestamp: 1640995200 (seconds)
+- BusinessDay: { year: 2023, month: 1, day: 1 }
+
+================================================================================
+6. PLUGINS & CUSTOMIZATION
+================================================================================
+
+6.1 PLUGIN TYPES
+-----------------
+- Custom Series: New series types with custom data/rendering
+- Series Primitives: Attached to series (drawing tools, annotations)
+- Pane Primitives: Attached to panes (watermarks, chart-wide features)
+
+6.2 CUSTOM SERIES
+------------------
+Implement ICustomSeriesPaneView interface:
+
+class MyCustomSeries {
+    // Implementation
+}
+
+const customSeries = new MyCustomSeries();
+const series = chart.addCustomSeries(customSeries, options);
+
+6.3 PRIMITIVES
+--------------
+// Series Primitive
+series.attachPrimitive(primitive);
+
+// Pane Primitive
+const mainPane = chart.panes()[0];
+mainPane.attachPrimitive(primitive);
+
+6.4 PLUGIN SCAFFOLDING
+-----------------------
+npm create lwc-plugin@latest
+
+6.5 PLUGIN EXAMPLES
+-------------------
+Demo: https://tradingview.github.io/lightweight-charts/plugin-examples
+Source: https://github.com/tradingview/lightweight-charts/tree/master/plugin-examples
+
+================================================================================
+7. FRAMEWORK INTEGRATIONS
+================================================================================
+
+7.1 REACT
+---------
+Tutorial: https://tradingview.github.io/lightweight-charts/tutorials/react/simple
+
+// Basic React implementation
+import { createChart } from 'lightweight-charts';
+import { useEffect, useRef } from 'react';
+
+function ChartComponent() {
+    const chartContainerRef = useRef();
+    
+    useEffect(() => {
+        const chart = createChart(chartContainerRef.current, {
+            width: 800,
+            height: 400
+        });
+        
+        const series = chart.addCandlestickSeries();
+        series.setData(candlestickData);
+        
+        return () => chart.remove();
+    }, []);
+    
+    return <div ref={chartContainerRef} />;
+}
+
+Popular React wrapper: react-lightweight-charts
+
+7.2 VUE.JS
+----------
+Tutorial: https://tradingview.github.io/lightweight-charts/tutorials/vuejs/wrapper
+
+7.3 WEB COMPONENTS
+------------------
+Tutorial: https://tradingview.github.io/lightweight-charts/tutorials/webcomponents/custom-element
+
+================================================================================
+8. INTERESTING PROJECTS & COMMUNITY PROJECTS
+================================================================================
+
+8.1 OFFICIAL EXAMPLES
+---------------------
+- Demo Page: https://tradingview.github.io/lightweight-charts/
+- Indicator Examples: https://tradingview.github.io/lightweight-charts/indicator-examples/
+- Plugin Examples: https://tradingview.github.io/lightweight-charts/plugin-examples/
+- Getting Started YouTube: https://www.youtube.com/watch?v=x7hnqNYE2GE (by Chad Thackray)
+
+================================================================================
+8.2 FRAMEWORK WRAPPERS (COMMUNITY)
+================================================================================
+
+REACT:
+------
+- kaktana-react-lightweight-charts (Official-like wrapper)
+  GitHub: https://github.com/Kaktana/kaktana-react-lightweight-charts
+  Stars: 108 | Forks: 56
+  Popular React wrapper with good documentation
+
+- lightweight-charts-react-wrapper
+  NPM: npm install lightweight-charts-react-wrapper
+  GitHub: https://github.com/trash-and-fire/lightweight-charts-react-wrapper
+  
+- @qognicafinance/react-lightweight-charts
+  NPM: @qognicafinance/react-lightweight-charts
+
+VUE.JS:
+-------
+- vue-lightweight-charts (official tutorial integration)
+  Tutorial: https://tradingview.github.io/lightweight-charts/tutorials/vuejs/wrapper
+
+ANGULAR:
+--------
+- ngx-lightweight-charts
+  GitHub: https://github.com/jamesbrobb/ngx-lightweight-charts
+  Stars: 7 | Forks: 1
+  Angular wrapper for TradingView lightweight-charts
+
+SVELTE:
+-------
+- svelte-lightweight-charts
+  GitHub: https://github.com/trash-and-fire/svelte-lightweight-charts
+  Stars: 18 | Forks: 117
+  Demo: https://svelte-lightweight-charts.demo.j失眠.com
+  
+- lightweight-charts-svelte (Svelte 5 compatible)
+  GitHub: https://github.com/HuakunShen/lightweight-charts-svelte
+  By: HuakunShen
+
+SOLIDJS:
+--------
+- solid-lightweight-charts (@dschz/solid-lightweight-charts)
+  GitHub: https://github.com/dsnchz/solid-lightweight-charts
+  Stars: 13 | Forks: 3
+  NPM: npm install @dschz/solid-lightweight-charts
+  JSR: Available on JSR
+  Features: Fully typed, declarative, reactive charting
+
+UNIVERSAL WRAPPERS:
+-------------------
+- lightweight-charts-wrappers (by nabla-studio)
+  GitHub: https://github.com/nabla-studio/lightweight-charts-wrappers
+  Stars: 1
+  A Universal Wrapper for Lightweight Charts
+
+================================================================================
+8.3 PYTHON WRAPPERS
+================================================================================
+
+- lightweight-charts-python (by louisnw01)
+  GitHub: https://github.com/louisnw01/lightweight-charts-python
+  PyPi: pip install lightweight-charts
+  Stars: 13+
+  Features: Pythonic way to access TradingView Lightweight Charts
+  
+- lightweight-charts-python fork (by smalinin)
+  GitHub: https://github.com/smalinin/bn_lightweight-charts-python
+  Stars: 13 | Latest: v1.2.0 (Feb 2026)
+  Enhanced fork with additional features
+
+- lightweight-charts-python (by SiddharthUchil)
+  GitHub: https://github.com/SiddharthUchil/Interactive-Trading-Charts
+  MIT License
+
+================================================================================
+8.4 REAL-TIME CRYPTO TRADING PROJECTS
+================================================================================
+
+BINANCE INTEGRATIONS:
+---------------------
+- Binance TradingView Demo (by hoanganhx86)
+  GitHub: https://github.com/hoanganhx86/binance-tradingview-demo
+  TradingView using Binance data source
+
+- tradingview-okx (by discountry)
+  GitHub: https://github.com/discountry/tradingview-okx
+  Next.js v13 + OKX API integration
+
+- Tradingview (by chtryanil)
+  GitHub: https://github.com/chtryanil/Tradingview
+  Real-time cryptocurrency screener with Next.js + TypeScript + Python
+
+- CryptoTradingPlatform (by abdulbaqui17)
+  GitHub: https://github.com/abdulbaqui17/CryptoTradingPlatform
+  Real-time crypto trading platform with Binance, TimescaleDB, Redis
+
+- lite_weight_tradingview (by dragonzurfer)
+  GitHub: https://github.com/dragonzurfer/lite_weight_tradingview
+  React-stockcharts clone using WebSocket + REST API for live data
+
+TUTORIALS & BLOG POSTS:
+-----------------------
+- Building Real-Time Ratio Chart with WebSockets & TradingView
+  By: Bunny Eluvade (DEV.to)
+  Link: https://dev.to/eluvade/building-a-real-time-ratio-chart-with-websockets-tradingview-31go
+  
+- Binance WebSocket Order Book Implementation
+  Stack Overflow: https://stackoverflow.com/questions/67774825
+
+================================================================================
+8.5 PLUGINS & EXTENSIONS
+================================================================================
+
+DRAWING TOOLS:
+--------------
+- tv-lwc-chart-drawing-tools (by dtau00)
+  GitHub: https://github.com/dtau00/tv-lwc-chart-drawing-tools
+  Stars: 4
+  Chart Drawing Tools plugin for Lightweight Charts
+  
+- lightweight-chart-plugin (by safaritrader)
+  GitHub: https://github.com/safaritrader/lightweight-chart-plugin
+  Stars: 27 | Forks: 6
+  Tradingview Lightweight Chart Plugin (LCP)
+
+- quant_view (by kjp22)
+  GitHub: https://github.com/kjp22/quant_view
+  Stars: 3
+  Easy to add panes on TradingView chart
+
+DATA UTILITIES:
+---------------
+- TradingviewCombineKlines (by karthik947)
+  GitHub: https://github.com/karthik947/tradingviewcombineklines
+  Stars: 4
+  Combine lower timeframe data (1m) into higher (5m, 15m, 1h, etc.)
+
+================================================================================
+8.6 CODE SANDBOX & DEMOS
+================================================================================
+
+Popular CodeSandbox Examples:
+- vanilla JavaScript example starter project
+- vue-lightweight-charts
+- react-typescript React + TypeScript starter
+- tradingview-lightweight-candlestick
+- @uniswap/interface (Real DeFi dashboard)
+- Damon's Lightweight Charts Demo
+- Boskiv's examples
+- Next.js chart exploration
+- realtimeChart (gittmaan)
+
+================================================================================
+8.7 YOUTUBE TUTORIALS & COURSES
+================================================================================
+
+- "Getting started with TradingView lightweight charts"
+  By: Chad Thackray (Dec 2025)
+  YouTube: https://www.youtube.com/watch?v=x7hnqNYE2GE
+  Code: https://github.com/ChadThackray/getting-started-lightweight-charts-2025
+  
+- "Binance API Tutorial - Real-Time Candlestick Charts"
+  By: Part Time Larry
+  YouTube: https://www.youtube.com/watch?v=EeT3Ore4Sao
+  Views: 60K+
+  
+- Various tutorials on React, Vue, and mobile integrations
+
+================================================================================
+8.8 REAL-WORLD USE CASES
+================================================================================
+
+- Cryptocurrency trading dashboards
+- Stock market charts
+- Financial data visualization
+- Forex trading platforms
+- Technical analysis tools
+- Backtesting interfaces
+- DeFi dashboards (Uniswap interface uses it)
+- Portfolio trackers
+- Order book visualizations
+
+================================================================================
+8.9 NOTABLE COMMUNITY CONTRIBUTORS
+================================================================================
+
+Top Contributors on GitHub:
+- timocov
+- SlicedSilver
+- eugene-korobko
+- edew
+- kirchet
+- Nipheris
+- illetid
+- romfrancois
+- signatenkov
+- Ffloriel
+
+Notable Discussions:
+- 70+ Technical Analysis Indicators: 
+  https://github.com/tradingview/lightweight-charts/discussions/2027
+- SolidJS Integration: 
+  https://github.com/tradingview/lightweight-charts/discussions/1891
+- Plugin creation from scratch:
+  https://github.com/tradingview/lightweight-charts/issues/1713
+
+================================================================================
+9. TUTORIALS & HOW-TO GUIDES
+================================================================================
+
+9.1 GUIDES
+----------
+- Customization: https://tradingview.github.io/lightweight-charts/tutorials/customization/intro
+- Accessibility: https://tradingview.github.io/lightweight-charts/tutorials/a11y/intro
+
+9.2 HOW-TO ARTICLES
+-------------------
+- Custom horizontal scale
+- Inverted Price Scale
+- Legends
+- Panes
+- Price and Volume
+- Price Lines
+- Series Markers
+- Set crosshair position
+- Tooltips
+- Two Price Scales
+- Watermark
+
+9.3 DEMOS
+---------
+- Compare multiple series
+- Custom font
+- Custom locale
+- Infinite history
+- Moving average
+- Range switcher
+- Realtime updates
+- Whitespace data
+- Yield Curve with Updates
+
+================================================================================
+10. TECHNICAL INDICATORS
+================================================================================
+
+The library provides examples for 70+ technical indicators.
+
+Available Indicators (with source code):
+- Average Price
+- Correlation
+- Median Price
+- Momentum
+- Simple Moving Average (SMA)
+- Percent Change
+- Product
+- Ratio
+- Spread
+- Sum
+- Weighted Close
+
+More indicators available in GitHub discussion:
+https://github.com/tradingview/lightweight-charts/discussions/2027
+
+Indicator Examples Repository:
+https://github.com/tradingview/lightweight-charts/tree/master/indicator-examples
+
+Live Demo:
+https://tradingview.github.io/lightweight-charts/indicator-examples/
+
+================================================================================
+11. VERSION HISTORY & RELEASE NOTES
+================================================================================
+
+VERSION 5.1.0 (Latest)
+----------------------
+MAJOR FEATURES:
+- Data Conflation: Performance optimization for large datasets
+  * Merges data points when zoomed out
+  * Dramatically improves rendering for 10,000+ data points
+  * Opt-in via enableConflation option
+  * Configurable conflationThresholdFactor and precomputeConflationOnInit
+
+ENHANCEMENTS:
+- Added doNotSnapToHiddenSeriesIndices to CrosshairOptions
+- Enhanced takeScreenshot with addTopLayer and includeCrosshair parameters
+- Added pop method to series API (removes data points from end)
+- Added autoScale option to SeriesMarkersOptions
+- Added base option to price format configuration
+
+BUG FIXES:
+- Fixed price axis label positioning with plugin views
+- Fixed time scale fitContent with rightOffset option
+- Various performance improvements
+
+CONTRIBUTORS:
+- @tpunt (Thomas Punt)
+- @zbinlin (Colin Cheng)
+
+VERSION 5.0.x UPDATES
+---------------------
+5.0.9:
+- Added rightOffsetPixels option for pixel-based margin
+- Enhanced takeScreenshot method
+- Added autoScale for series markers
+- Added base option for price format
+
+5.0.8:
+- Improved pane API (addPane, getStretchFactor, setStretchFactor)
+- Enhanced price scale tick mark formatting
+- Custom series support improvements
+
+5.0.7:
+- Price scale visible range control (setVisibleRange, getVisibleRange)
+- ensureEdgeTickMarksVisible option
+- Series markers zOrder control
+
+5.0.6:
+- Series order functionality (setSeriesOrder, seriesOrder)
+
+5.0.5:
+- Performance fixes for series markers
+
+5.0.4:
+- Performance optimization for large datasets
+- Price-based positioning for series markers
+- MagnetOHLC crosshair mode
+
+VERSION 5.0.0 (Major Release)
+----------------------------
+- Reduced bundle size by up to 16% (now ~35KB)
+- Multi-Pane Support (most requested feature)
+- New Chart Types:
+  * Yield Curve Charts
+  * Options Charts (price-based)
+- Enhanced Color Support (sRGB, Display P3)
+- Architectural Improvements:
+  * Watermark as plugins (TextWatermark, ImageWatermark)
+  * Series Markers as plugin
+  * Pane Primitives introduction
+- Breaking Changes:
+  * New unified series creation API
+  * Dropped CommonJS support
+  * ES2020 syntax requirement
+
+VERSION 4.x
+-----------
+4.2.x:
+- attributionLogo option
+- Improved data validation
+- Price scale label alignment improvements
+
+4.1.x:
+- Plugins System (Custom Series, Primitives)
+- Horizontal Scale Customization
+- Point markers styling
+- Double click subscriber
+- setCrosshairPosition API
+- Crosshair hidden mode
+
+4.0.x:
+- Fancy-canvas 2 integration
+- ES module exports
+- Updated scales design
+- Curved lines support
+- invertFilledArea for Area series
+
+VERSION 3.x
+-----------
+3.8.0: Own documentation website launched
+3.7.0: Baseline series chart, time zones support
+3.6.0: Gradient backgrounds, kinetic scroll
+3.5.0: Series rendering order fixes
+
+MIGRATION GUIDES:
+- From v4 to v5: https://tradingview.github.io/lightweight-charts/docs/migrations/from-v4-to-v5
+- From v3 to v4: https://tradingview.github.io/lightweight-charts/docs/migrations/from-v3-to-v4
+- From v2 to v3: https://tradingview.github.io/lightweight-charts/docs/5.0/migrations/from-v2-to-v3
+
+Full Release Notes:
+https://tradingview.github.io/lightweight-charts/docs/release-notes
+
+================================================================================
+12. RESOURCES & LINKS
+================================================================================
+
+Official Resources:
+-------------------
+- Main Site: https://www.tradingview.com/lightweight-charts/
+- Documentation: https://tradingview.github.io/lightweight-charts/docs
+- GitHub: https://github.com/tradingview/lightweight-charts
+- NPM: https://www.npmjs.com/package/lightweight-charts
+- Stack Overflow: https://stackoverflow.com/questions/tagged/lightweight-charts
+- Twitter: @tradingview
+
+Demo & Examples:
+----------------
+- Live Demo: https://tradingview.github.io/lightweight-charts/
+- Indicator Examples: https://tradingview.github.io/lightweight-charts/indicator-examples/
+- Plugin Examples: https://tradingview.github.io/lightweight-charts/plugin-examples/
+
+Community:
+----------
+- GitHub Discussions: https://github.com/tradingview/lightweight-charts/discussions
+- Report Issues: https://github.com/tradingview/lightweight-charts/issues
+
+Mobile Support:
+--------------
+- iOS: https://tradingview.github.io/lightweight-charts/docs/ios
+- Android: https://tradingview.github.io/lightweight-charts/docs/android
+
+Migration Guides:
+-----------------
+- v4 to v5: https://tradingview.github.io/lightweight-charts/docs/migrations/from-v4-to-v5
+- v3 to v4: https://tradingview.github.io/lightweight-charts/docs/migrations/from-v3-to-v4
+- v2 to v3: https://tradingview.github.io/lightweight-charts/docs/5.0/migrations/from-v2-to-v3
+
+Additional TradingView Products:
+--------------------------------
+- Advanced Charts: https://www.tradingview.com/charting-library-docs/
+- TradingView Widgets: https://www.tradingview.com/widget/
+
+Plugin Development:
+------------------
+- create-lwc-plugin: npm create lwc-plugin@latest
+- Plugin Examples GitHub: https://github.com/tradingview/lightweight-charts/tree/master/plugin-examples
+
+Useful Tools:
+-------------
+- fancy-canvas: Internal canvas configuration library
+- Version Check: TradingView.version() in browser console
+
+================================================================================
+13. COMPREHENSIVE API QUICK REFERENCE
+================================================================================
+
+MAIN FUNCTIONS:
+---------------
+createChart(container, options)        - Create standard time-based chart
+createYieldCurveChart(container, opts)  - Create yield curve chart
+createOptionsChart(container, options)  - Create price-based chart
+createChartEx(container, behavior, opts)- Create chart with custom scale
+createTextWatermark(chart, options)    - Create text watermark
+createImageWatermark(chart, options)   - Create image watermark
+createSeriesMarkers(series, options)   - Create series markers
+createUpDownMarkers(series, options)   - Create up/down markers
+version                                - Get library version
+
+SERIES TYPES (Exports):
+-----------------------
+AreaSeries, BarSeries, BaselineSeries, CandlestickSeries, 
+HistogramSeries, LineSeries
+
+ISERIES API METHODS:
+--------------------
+setData(data)                  - Set all data (replaces existing)
+update(data)                   - Update last point or add new
+applyOptions(options)          - Apply new options
+priceScale()                   - Get price scale API
+markers()                      - Get markers
+dataByIndex(index, interval)   - Get data by index
+barsInLogicalRange(logicalRange)- Get bars info
+setMarker(marker)              - Set single marker
+remove()                       - Remove series
+
+ICHART API METHODS:
+------------------
+remove()                       - Remove chart and DOM elements
+resize(width, height)          - Resize chart
+addSeries(SeriesType, opts)    - Add new series
+addCustomSeries(instance, opts)- Add custom series
+timeScale()                    - Get time scale API
+priceScale(id)                 - Get price scale by ID
+applyOptions(options)          - Apply chart options
+subscribeClick(handler)        - Subscribe to click events
+subscribeCrosshairMove(handler)- Subscribe to crosshair movement
+subscribedDblClick(handler)    - Subscribe to double-click
+
+ITIMESCALE API METHODS:
+-----------------------
+fitContent()                   - Fit all content in view
+setVisibleRange(range)         - Set visible time range
+getVisibleRange()              - Get visible time range
+setVisibleLogicalRange(range)  - Set logical range
+getVisibleLogicalRange()       - Get logical range
+resetTimeScale()               - Reset to default
+subscribeVisibleRangeChange(cb)- Subscribe to range changes
+convertToIndex(time)            - Convert time to index
+convertToTime(index)           - Convert index to time
+
+IPRICESCALE API METHODS:
+-----------------------
+applyOptions(options)          - Apply price scale options
+getOptions()                   - Get current options
+setVisibleRange(range)         - Set visible range
+getVisibleRange()              - Get visible range
+setAutoScale(enabled)          - Enable/disable auto-scale
+
+ENUMERATIONS REFERENCE:
+-----------------------
+CrosshairMode: Normal, Magnet, MagnetOHLC, Hidden
+LineStyle: Solid, Dotted, Dashed, LargeDashed, SparseDotted
+LineType: Simple, WithSteps
+PriceScaleMode: Normal, Logarithmic, Percentage, Indexed
+LastPriceAnimationMode: Continuous, OnDataUpdate, Disabled
+ColorType: Solid, Gradient
+MarkerSign: ArrowUp, ArrowDown, Circle, Square, TriangleDown, TriangleUp
+
+================================================================================
+14. DATA FORMAT REFERENCE
+================================================================================
+
+SINGLE VALUE DATA (Area, Baseline, Line):
+-----------------------------------------
+{ time: '2023-01-01' | 1640995200, value: 123.45 }
+
+BAR DATA:
+---------
+{ time: '2023-01-01', open: 100, high: 110, low: 95, close: 105 }
+
+CANDLESTICK DATA:
+-----------------
+{ time: '2023-01-01', open: 100, high: 110, low: 95, close: 105 }
+
+HISTOGRAM DATA:
+---------------
+{ time: '2023-01-01', value: 50, color: 'red' }
+
+WHITESPACE DATA (Gaps):
+-----------------------
+{ time: '2023-01-01' }
+
+TIME FORMAT OPTIONS:
+--------------------
+- String: '2023-01-01' (yyyy-mm-dd)
+- Unix Timestamp: 1640995200 (seconds since epoch)
+- BusinessDay: { year: 2023, month: 1, day: 1 }
+
+================================================================================
+15. OPTIONS REFERENCE
+================================================================================
+
+CHART OPTIONS:
+--------------
+width, height, layout, grid, crosshair, handleScroll, handleScale,
+timeScale, rightPriceScale, leftPriceScale, overlayPriceScales,
+autoSize, mode
+
+LAYOUT OPTIONS:
+---------------
+background (solid color or gradient), textColor, fontSize, fontFamily,
+attributionLogo
+
+GRID OPTIONS:
+-------------
+vertLines, horzLines, vertLineColor, horzLineColor, lineStyle, lineWidth
+
+CROSSHAIR OPTIONS:
+------------------
+mode, vertLine, horzLine, snap, allowScaleSnap
+
+TIME SCALE OPTIONS:
+-------------------
+rightOffset, barSpacing, minBarSpacing, scrollToVisibleRange,
+fixLeftEdge, fixRightEdge, timeVisible, secondsVisible
+
+PRICE SCALE OPTIONS:
+--------------------
+position, autoScale, invertScale, alignLabels, borderVisible,
+scaleMargins
+
+================================================================================
+                              END OF DOCUMENTATION
+================================================================================
+Generated: 2026
+Version Covered: 5.x (latest)

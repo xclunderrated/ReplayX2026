@@ -1,0 +1,31 @@
+node_modules
+.forexfactory-cache
+
+# Build output
+dist/
+
+# Market data caches
+.dukascopy-cache/
+.dukascopy-cache-test/
+
+# Test build artifacts
+.test-build/
+
+# Local logs and stray files
+dev-server.log
+server.log
+server.err
+node
+{s.destroy()}
+
+# Tool state and build artifacts
+.pi/
+*.tsbuildinfo
+
+# Corrupted git backup
+.git-corrupt/
+.git-corrupt-bak/
+
+# Environment secrets (keep .env.example)
+.env
+.env.local

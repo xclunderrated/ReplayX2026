@@ -1,0 +1,44 @@
+NVIDIA NIM Free Models - Top 5 Specific Model Names
+
+1. nemotron-4-340b
+   - Specialization: Planning and reasoning tasks
+   - Capabilities: 
+     * Advanced agentic AI reasoning
+     * Complex problem solving and strategic planning
+     * Multi-step task decomposition
+   - Best For: Planning
+
+2. llama3-70b-instruct
+   - Specialization: General execution and code generation
+   - Capabilities:
+     * Code generation and completion
+     * Instruction following for execution tasks
+     * Natural language to code translation
+   - Best For: Execution
+
+3. codellama-70b-instruct
+   - Specialization: Code-related tasks and bug fixes
+   - Capabilities:
+     * Bug detection and fixing in code
+     * Code optimization and refactoring
+     * Debugging assistance
+   - Best For: Bug Fixes
+
+4. mistral-7b-instruct
+   - Specialization: Balanced performance across tasks
+   - Capabilities:
+     * Efficient reasoning and planning
+     * Code execution and generation
+     * Task orchestration
+   - Best For: Mixed tasks requiring balanced capabilities
+
+5. chatglm3-6b
+   - Specialization: Multilingual tasks and conversational AI
+   - Capabilities:
+     * Strong performance in Chinese and multilingual contexts
+     * Conversational dialogue understanding
+     * Instruction following across multiple domains
+   - Best For: Multilingual applications and conversational interfaces
+
+Note: Qwen models were not found in the NVIDIA NIM catalog at the time of this research.
+All models are accessible through NVIDIA's NIM API with free serverless access for development purposes.

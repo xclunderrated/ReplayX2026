@@ -1,0 +1,6 @@
+{
+  "name": "ReplayX",
+  "description": "Production-focused market replay, trading simulator, backtesting, and journaling engine using real historical data from Dukascopy",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

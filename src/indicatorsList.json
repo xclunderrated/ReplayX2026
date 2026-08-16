@@ -1,0 +1,2027 @@
+[
+  {
+    "id": "ADR",
+    "title": "Average Day Range",
+    "shortTitle": "ADR"
+  },
+  {
+    "id": "ADX",
+    "title": "Average Directional Index",
+    "shortTitle": "ADX"
+  },
+  {
+    "id": "ADXCobra",
+    "title": "ADX by cobra",
+    "shortTitle": "ADX Cobra"
+  },
+  {
+    "id": "AIEngulfing",
+    "title": "AI Engulfing Candle",
+    "shortTitle": "AIEngulf"
+  },
+  {
+    "id": "AKTrendID",
+    "title": "AK TREND ID",
+    "shortTitle": "AKTID"
+  },
+  {
+    "id": "ALMA",
+    "title": "Arnaud Legoux Moving Average",
+    "shortTitle": "ALMA"
+  },
+  {
+    "id": "ATR",
+    "title": "Average True Range",
+    "shortTitle": "ATR"
+  },
+  {
+    "id": "ATRPlus",
+    "title": "ATR+ (Stop Loss Indicator)",
+    "shortTitle": "ATR+"
+  },
+  {
+    "id": "ATRTrailingColored",
+    "title": "Average True Range Trailing Stops Colored",
+    "shortTitle": "ATRTSC"
+  },
+  {
+    "id": "ATRTrailingStops",
+    "title": "ATR Trailing Stops",
+    "shortTitle": "ATRTS"
+  },
+  {
+    "id": "AbandonedBabyBearish",
+    "title": "Abandoned Baby Bearish",
+    "shortTitle": "AB"
+  },
+  {
+    "id": "AbandonedBabyBullish",
+    "title": "Abandoned Baby Bullish",
+    "shortTitle": "AB"
+  },
+  {
+    "id": "AccurateSwingTrading",
+    "title": "Accurate Swing Trading",
+    "shortTitle": "AST"
+  },
+  {
+    "id": "AdaptiveHullMA",
+    "title": "72s: Adaptive Hull Moving Average+",
+    "shortTitle": "AHMA+"
+  },
+  {
+    "id": "AdaptiveMACD",
+    "title": "Adaptive MACD",
+    "shortTitle": "AdpMACD"
+  },
+  {
+    "id": "AdaptiveTrendFlow",
+    "title": "Adaptive Trend Flow [QuantAlgo]",
+    "shortTitle": "ATF"
+  },
+  {
+    "id": "AiTrendNavigator",
+    "title": "AI Trend Navigator [K-Neighbor]",
+    "shortTitle": "AI-TN"
+  },
+  {
+    "id": "AllCandlestickPatterns",
+    "title": "All Candlestick Patterns",
+    "shortTitle": "CdlPat"
+  },
+  {
+    "id": "AlphaTrend",
+    "title": "AlphaTrend",
+    "shortTitle": "AT"
+  },
+  {
+    "id": "AntiVolumeStop",
+    "title": "Anti-Volume Stop Loss",
+    "shortTitle": "AVStop"
+  },
+  {
+    "id": "Aroon",
+    "title": "Aroon",
+    "shortTitle": "Aroon"
+  },
+  {
+    "id": "AutoFib",
+    "title": "Auto Fibonacci",
+    "shortTitle": "AutoFib"
+  },
+  {
+    "id": "AutoFiboIndicators",
+    "title": "Auto Fibo on Indicators",
+    "shortTitle": "AutoFibo"
+  },
+  {
+    "id": "AutoSupport",
+    "title": "Auto-Support",
+    "shortTitle": "AutoSup"
+  },
+  {
+    "id": "AutoSupportResistance",
+    "title": "Automatic Support & Resistance",
+    "shortTitle": "Auto S/R"
+  },
+  {
+    "id": "AverageSentimentOscillator",
+    "title": "Average Sentiment Oscillator",
+    "shortTitle": "ASO"
+  },
+  {
+    "id": "AwesomeOscillator",
+    "title": "Awesome Oscillator",
+    "shortTitle": "AO"
+  },
+  {
+    "id": "AwesomeOscillatorV2",
+    "title": "Awesome Oscillator V2",
+    "shortTitle": "AOv2"
+  },
+  {
+    "id": "BBBandWidth",
+    "title": "Bollinger BandWidth",
+    "shortTitle": "BBW"
+  },
+  {
+    "id": "BBBreakoutOscillator",
+    "title": "BB Breakout Oscillator",
+    "shortTitle": "BBBO"
+  },
+  {
+    "id": "BBFibonacciRatios",
+    "title": "BB Fibonacci Ratios",
+    "shortTitle": "BB Fib"
+  },
+  {
+    "id": "BBPercentB",
+    "title": "Bollinger Bands %b",
+    "shortTitle": "BB %b"
+  },
+  {
+    "id": "BBStochRSI",
+    "title": "BB Stochastic RSI Extreme Signal",
+    "shortTitle": "BBSR Extreme"
+  },
+  {
+    "id": "BBTrend",
+    "title": "BBTrend",
+    "shortTitle": "BBTrend"
+  },
+  {
+    "id": "BOP",
+    "title": "Balance of Power",
+    "shortTitle": "BOP"
+  },
+  {
+    "id": "BankerFundFlow",
+    "title": "Banker Fund Flow Trend Oscillator",
+    "shortTitle": "BankerFlow"
+  },
+  {
+    "id": "BetterVolume",
+    "title": "Better Volume Indicator",
+    "shortTitle": "BVI"
+  },
+  {
+    "id": "BinaryOptionArrows",
+    "title": "Binary Option Arrows",
+    "shortTitle": "BinArrows"
+  },
+  {
+    "id": "BitcoinKillZones",
+    "title": "Bitcoin Kill Zones v2",
+    "shortTitle": "BKZ"
+  },
+  {
+    "id": "BitcoinLogCurves",
+    "title": "Bitcoin Log Growth Curves",
+    "shortTitle": "BTC Log"
+  },
+  {
+    "id": "BjorgumTripleEma",
+    "title": "Bjorgum Triple EMA Strategy",
+    "shortTitle": "BJ HEMA"
+  },
+  {
+    "id": "BollingerAwesomeAlert",
+    "title": "Bollinger Awesome Alert R1.1",
+    "shortTitle": "BBAWE"
+  },
+  {
+    "id": "BollingerBands",
+    "title": "Bollinger Bands",
+    "shortTitle": "BB"
+  },
+  {
+    "id": "BollingerBars",
+    "title": "Bollinger Bars",
+    "shortTitle": "BB Bars"
+  },
+  {
+    "id": "BullBearPower",
+    "title": "Bull Bear Power",
+    "shortTitle": "BBP"
+  },
+  {
+    "id": "BullBearPowerTrend",
+    "title": "Bull Bear Power Trend",
+    "shortTitle": "BBPT"
+  },
+  {
+    "id": "BullishEngulfingFinder",
+    "title": "Bullish Engulfing Finder",
+    "shortTitle": "BullEngulf"
+  },
+  {
+    "id": "BullsBears",
+    "title": "CM TotalConsecutive Up/Down V2",
+    "shortTitle": "CM_TotalConsec_Up_Down_V2"
+  },
+  {
+    "id": "BuySellPressure",
+    "title": "Buy & Sell Pressure",
+    "shortTitle": "BSVP"
+  },
+  {
+    "id": "BuyingSellVolume",
+    "title": "Buying Selling Volume",
+    "shortTitle": "BSVol"
+  },
+  {
+    "id": "CCI",
+    "title": "Commodity Channel Index",
+    "shortTitle": "CCI"
+  },
+  {
+    "id": "CCIOBV",
+    "title": "CCI coded OBV",
+    "shortTitle": "CCIOBV"
+  },
+  {
+    "id": "CCIStochastic",
+    "title": "CCI Stochastic",
+    "shortTitle": "CCIStoch"
+  },
+  {
+    "id": "CCTBBO",
+    "title": "CCT Bollinger Band Oscillator",
+    "shortTitle": "CCTBBO"
+  },
+  {
+    "id": "CDCActionZone",
+    "title": "CDC Action Zone",
+    "shortTitle": "CDC"
+  },
+  {
+    "id": "CMEMATrendBars",
+    "title": "CM EMA Trend Bars",
+    "shortTitle": "CM EMA"
+  },
+  {
+    "id": "CMEnhancedIchimoku",
+    "title": "CM Enhanced Ichimoku Cloud V5",
+    "shortTitle": "CM Ichimoku"
+  },
+  {
+    "id": "CMGannSwing",
+    "title": "CM Gann Swing High Low V2",
+    "shortTitle": "Gann Swing"
+  },
+  {
+    "id": "CMGuppyEMA",
+    "title": "CM Guppy EMA",
+    "shortTitle": "GuppyEMA"
+  },
+  {
+    "id": "CMHeikinAshi",
+    "title": "CM Heikin-Ashi",
+    "shortTitle": "CMHA"
+  },
+  {
+    "id": "CMLaguerrePPO",
+    "title": "CM Laguerre PPO PercentileRank",
+    "shortTitle": "LagPPO"
+  },
+  {
+    "id": "CMPriceAction",
+    "title": "CM Price Action Bars",
+    "shortTitle": "CMPriceAction"
+  },
+  {
+    "id": "CMRSI2Lower",
+    "title": "CM RSI-2 Strategy Lower",
+    "shortTitle": "CMRSI2L"
+  },
+  {
+    "id": "CMRSI2Upper",
+    "title": "CM RSI-2 Strategy Upper",
+    "shortTitle": "CMRSI2"
+  },
+  {
+    "id": "CMRSIPlusEMA",
+    "title": "CM RSI Plus EMA",
+    "shortTitle": "CMRSIEMA"
+  },
+  {
+    "id": "CMSlingShot",
+    "title": "CM Sling Shot System",
+    "shortTitle": "CMSlShot"
+  },
+  {
+    "id": "CMStochHighlight",
+    "title": "CM Stochastic Highlight Bars",
+    "shortTitle": "CMStochHL"
+  },
+  {
+    "id": "CMTimeLines",
+    "title": "CM Time Based Vertical Lines",
+    "shortTitle": "CMTime"
+  },
+  {
+    "id": "CMVixFixV3",
+    "title": "CM Williams Vix Fix V3",
+    "shortTitle": "VixFixV3"
+  },
+  {
+    "id": "COGChannel",
+    "title": "Center of Gravity Channel",
+    "shortTitle": "COGCh"
+  },
+  {
+    "id": "CandlestickReversal",
+    "title": "Candlestick Reversal System",
+    "shortTitle": "CdlRev"
+  },
+  {
+    "id": "ChaikinMF",
+    "title": "Chaikin Money Flow",
+    "shortTitle": "CMF"
+  },
+  {
+    "id": "ChaikinOscillator",
+    "title": "Chaikin Oscillator",
+    "shortTitle": "Chaikin Osc"
+  },
+  {
+    "id": "ChandeKrollStop",
+    "title": "Chande Kroll Stop",
+    "shortTitle": "CKS"
+  },
+  {
+    "id": "ChandeMO",
+    "title": "Chande Momentum Oscillator",
+    "shortTitle": "ChandeMO"
+  },
+  {
+    "id": "ChandelierExit",
+    "title": "Chandelier Exit",
+    "shortTitle": "CE"
+  },
+  {
+    "id": "ChandelierStop",
+    "title": "Chandelier Stop",
+    "shortTitle": "CStop"
+  },
+  {
+    "id": "ChopZone",
+    "title": "Chop Zone",
+    "shortTitle": "Chop Zone"
+  },
+  {
+    "id": "Choppiness",
+    "title": "Choppiness Index",
+    "shortTitle": "CHOP"
+  },
+  {
+    "id": "ColoredVolume",
+    "title": "Colored Volume Bars",
+    "shortTitle": "CVolBars"
+  },
+  {
+    "id": "ConnorsRSI",
+    "title": "Connors RSI",
+    "shortTitle": "CRSI"
+  },
+  {
+    "id": "ConsolidationZones",
+    "title": "Consolidation Zones - Live",
+    "shortTitle": "ConsZones"
+  },
+  {
+    "id": "CoppockCurve",
+    "title": "Coppock Curve",
+    "shortTitle": "Coppock"
+  },
+  {
+    "id": "CoralTrend",
+    "title": "Coral Trend",
+    "shortTitle": "Coral"
+  },
+  {
+    "id": "CumulativeVolumeDelta",
+    "title": "Cumulative Volume Delta",
+    "shortTitle": "CVD"
+  },
+  {
+    "id": "DEMA",
+    "title": "Double EMA",
+    "shortTitle": "DEMA"
+  },
+  {
+    "id": "DMI",
+    "title": "Directional Movement Index",
+    "shortTitle": "DMI"
+  },
+  {
+    "id": "DMIADX",
+    "title": "Directional Movement Index + ADX & Key Levels",
+    "shortTitle": "DMI ADX"
+  },
+  {
+    "id": "DPO",
+    "title": "Detrended Price Oscillator",
+    "shortTitle": "DPO"
+  },
+  {
+    "id": "DarkCloudCover",
+    "title": "Dark Cloud Cover",
+    "shortTitle": "DCC"
+  },
+  {
+    "id": "DarvasBox",
+    "title": "Darvas Box",
+    "shortTitle": "Darvas"
+  },
+  {
+    "id": "DivergenceIndicator",
+    "title": "Divergence Indicator",
+    "shortTitle": "DivInd"
+  },
+  {
+    "id": "Doji",
+    "title": "Doji",
+    "shortTitle": "Doji"
+  },
+  {
+    "id": "DojiStarBearish",
+    "title": "Doji Star Bearish",
+    "shortTitle": "DS"
+  },
+  {
+    "id": "DojiStarBullish",
+    "title": "Doji Star Bullish",
+    "shortTitle": "DS"
+  },
+  {
+    "id": "DonchianChannels",
+    "title": "Donchian Channels",
+    "shortTitle": "DC"
+  },
+  {
+    "id": "DonchianCustom",
+    "title": "Custom Donchian Channels",
+    "shortTitle": "DonchianC"
+  },
+  {
+    "id": "DonchianTrendRibbon",
+    "title": "Donchian Trend Ribbon",
+    "shortTitle": "DTR"
+  },
+  {
+    "id": "DoubleMACD",
+    "title": "Double MACD",
+    "shortTitle": "DMACD"
+  },
+  {
+    "id": "DownsideTasukiGap",
+    "title": "Downside Tasuki Gap",
+    "shortTitle": "DTG"
+  },
+  {
+    "id": "DragonflyDoji",
+    "title": "Dragonfly Doji",
+    "shortTitle": "DD"
+  },
+  {
+    "id": "EMA",
+    "title": "Moving Average Exponential",
+    "shortTitle": "EMA"
+  },
+  {
+    "id": "EMAEnveloper",
+    "title": "EMA Enveloper",
+    "shortTitle": "EMAE"
+  },
+  {
+    "id": "EMAMACross",
+    "title": "EMA & MA Crossover",
+    "shortTitle": "EMAC"
+  },
+  {
+    "id": "EMAMulti",
+    "title": "EMA 20/50/100/200",
+    "shortTitle": "EMA4"
+  },
+  {
+    "id": "EMARibbon",
+    "title": "EMA Ribbon",
+    "shortTitle": "EMAR"
+  },
+  {
+    "id": "EMASupertrend",
+    "title": "EMA + SuperTrend",
+    "shortTitle": "EMA+ST"
+  },
+  {
+    "id": "EMAWave",
+    "title": "EMA Wave Indicator",
+    "shortTitle": "EMAW"
+  },
+  {
+    "id": "EVWMAEnvelope",
+    "title": "EVWMA Envelope",
+    "shortTitle": "EVWMA"
+  },
+  {
+    "id": "EaseOfMovement",
+    "title": "Ease of Movement",
+    "shortTitle": "EOM"
+  },
+  {
+    "id": "EasyTrendColors",
+    "title": "Easy Entry/Exit Trend Colors",
+    "shortTitle": "EasyTrend"
+  },
+  {
+    "id": "EhlersInstantaneousTrend",
+    "title": "Ehlers Instantaneous Trend",
+    "shortTitle": "EIT"
+  },
+  {
+    "id": "EhlersMESAMA",
+    "title": "Ehlers MESA Adaptive Moving Average",
+    "shortTitle": "MESA"
+  },
+  {
+    "id": "EhlersStochasticCG",
+    "title": "Ehlers Stochastic CG Oscillator",
+    "shortTitle": "ESCG"
+  },
+  {
+    "id": "ElderForceIndex",
+    "title": "Elder Force Index",
+    "shortTitle": "EFI"
+  },
+  {
+    "id": "ElliottWaveOscillator",
+    "title": "Elliott Wave Oscillator",
+    "shortTitle": "EWO"
+  },
+  {
+    "id": "EngulfingBearish",
+    "title": "Engulfing Bearish",
+    "shortTitle": "BE"
+  },
+  {
+    "id": "EngulfingBullish",
+    "title": "Engulfing Bullish",
+    "shortTitle": "BE"
+  },
+  {
+    "id": "EntryPoints",
+    "title": "Entry Points",
+    "shortTitle": "EntryPts"
+  },
+  {
+    "id": "Envelope",
+    "title": "Envelope",
+    "shortTitle": "Env"
+  },
+  {
+    "id": "EnvelopeRSI",
+    "title": "Envelope RSI",
+    "shortTitle": "EnvRSI"
+  },
+  {
+    "id": "EveningDojiStar",
+    "title": "Evening Doji Star",
+    "shortTitle": "EDS"
+  },
+  {
+    "id": "EveningStar",
+    "title": "Evening Star",
+    "shortTitle": "ES"
+  },
+  {
+    "id": "FXSniperT3CCI",
+    "title": "FX Sniper T3-CCI",
+    "shortTitle": "T3CCI"
+  },
+  {
+    "id": "FaithIndicator",
+    "title": "Faith Indicator",
+    "shortTitle": "Faith"
+  },
+  {
+    "id": "FallingThreeMethods",
+    "title": "Falling Three Methods",
+    "shortTitle": "FTM"
+  },
+  {
+    "id": "FallingWindow",
+    "title": "Falling Window",
+    "shortTitle": "FW"
+  },
+  {
+    "id": "FalseBreakout",
+    "title": "False Breakout (Expo)",
+    "shortTitle": "FalseBrk"
+  },
+  {
+    "id": "FibonacciBollingerBands",
+    "title": "Fibonacci Bollinger Bands",
+    "shortTitle": "FBB"
+  },
+  {
+    "id": "FibonacciLevels",
+    "title": "Fibonacci Levels",
+    "shortTitle": "FibLvl"
+  },
+  {
+    "id": "FibonacciZone",
+    "title": "Fibonacci Zone",
+    "shortTitle": "FibZone"
+  },
+  {
+    "id": "FisherTransform",
+    "title": "Fisher Transform",
+    "shortTitle": "Fisher"
+  },
+  {
+    "id": "FollowLine",
+    "title": "Follow Line",
+    "shortTitle": "FLI"
+  },
+  {
+    "id": "ForecastOscillator",
+    "title": "Forecast Oscillator",
+    "shortTitle": "FOSC"
+  },
+  {
+    "id": "ForexSessions",
+    "title": "Forex Sessions",
+    "shortTitle": "FXSessions"
+  },
+  {
+    "id": "FvgPositioningAverage",
+    "title": "FVG Positioning Average",
+    "shortTitle": "FVG Pos Avg"
+  },
+  {
+    "id": "GMMA",
+    "title": "Guppy Multiple Moving Average",
+    "shortTitle": "GMMA"
+  },
+  {
+    "id": "GannHighLow",
+    "title": "Gann High Low",
+    "shortTitle": "GannHL"
+  },
+  {
+    "id": "GaussianChannel",
+    "title": "Gaussian Channel",
+    "shortTitle": "GC"
+  },
+  {
+    "id": "GravestoneDoji",
+    "title": "Gravestone Doji",
+    "shortTitle": "GD"
+  },
+  {
+    "id": "HMA",
+    "title": "Hull Moving Average",
+    "shortTitle": "HMA"
+  },
+  {
+    "id": "HalfTrend",
+    "title": "HalfTrend",
+    "shortTitle": "HT"
+  },
+  {
+    "id": "Hammer",
+    "title": "Hammer",
+    "shortTitle": "Hammer"
+  },
+  {
+    "id": "HangingMan",
+    "title": "Hanging Man",
+    "shortTitle": "HM"
+  },
+  {
+    "id": "HaramiBearish",
+    "title": "Harami Bearish",
+    "shortTitle": "BH"
+  },
+  {
+    "id": "HaramiBullish",
+    "title": "Harami Bullish",
+    "shortTitle": "BH"
+  },
+  {
+    "id": "HaramiCrossBearish",
+    "title": "Harami Cross Bearish",
+    "shortTitle": "HC"
+  },
+  {
+    "id": "HaramiCrossBullish",
+    "title": "Harami Cross Bullish",
+    "shortTitle": "HC"
+  },
+  {
+    "id": "HawkEyeVolume",
+    "title": "HawkEye Volume",
+    "shortTitle": "HEVol"
+  },
+  {
+    "id": "HeatmapVolume",
+    "title": "Heatmap Volume",
+    "shortTitle": "HMV"
+  },
+  {
+    "id": "HemaTrendLevels",
+    "title": "HEMA Trend Levels",
+    "shortTitle": "HEMA"
+  },
+  {
+    "id": "HistoricalVolatility",
+    "title": "Historical Volatility",
+    "shortTitle": "HV"
+  },
+  {
+    "id": "HullSuite",
+    "title": "Hull Suite",
+    "shortTitle": "HS"
+  },
+  {
+    "id": "IFTStochRSICCI",
+    "title": "IFT Stoch RSI CCI",
+    "shortTitle": "IFTCombo"
+  },
+  {
+    "id": "IchimokuCloud",
+    "title": "Ichimoku Cloud",
+    "shortTitle": "Ichimoku"
+  },
+  {
+    "id": "IchimokuEMABands",
+    "title": "Ichimoku EMA Bands",
+    "shortTitle": "Ichi EMA"
+  },
+  {
+    "id": "IchimokuOscillator",
+    "title": "Ichimoku Oscillator",
+    "shortTitle": "IchiOsc"
+  },
+  {
+    "id": "IdealBbMa",
+    "title": "IDEAL BB with MA",
+    "shortTitle": "IBBMA"
+  },
+  {
+    "id": "ImpulseMACD",
+    "title": "Impulse MACD",
+    "shortTitle": "IMACD"
+  },
+  {
+    "id": "IntradayBuySell",
+    "title": "Intraday BUY_SELL",
+    "shortTitle": "IBS"
+  },
+  {
+    "id": "IntradayTSBB",
+    "title": "Intraday TS BB",
+    "shortTitle": "ITSBB"
+  },
+  {
+    "id": "IntradayVolumeSwings",
+    "title": "Intraday Volume Swings",
+    "shortTitle": "IVS"
+  },
+  {
+    "id": "InvertedHammer",
+    "title": "Inverted Hammer",
+    "shortTitle": "IH"
+  },
+  {
+    "id": "IsolatedPeakBottom",
+    "title": "Isolated Peak and Bottom",
+    "shortTitle": "ISOPB"
+  },
+  {
+    "id": "KDJ",
+    "title": "KDJ",
+    "shortTitle": "KDJ"
+  },
+  {
+    "id": "KaufmanAdaptiveMA",
+    "title": "Kaufman Adaptive Moving Average",
+    "shortTitle": "KAMA"
+  },
+  {
+    "id": "KeltnerChannels",
+    "title": "Keltner Channels",
+    "shortTitle": "KC"
+  },
+  {
+    "id": "KickingBearish",
+    "title": "Kicking Bearish",
+    "shortTitle": "K"
+  },
+  {
+    "id": "KickingBullish",
+    "title": "Kicking Bullish",
+    "shortTitle": "K"
+  },
+  {
+    "id": "KlingerOscillator",
+    "title": "Klinger Oscillator",
+    "shortTitle": "KVO"
+  },
+  {
+    "id": "KnowSureThing",
+    "title": "Know Sure Thing",
+    "shortTitle": "KST"
+  },
+  {
+    "id": "LSMA",
+    "title": "Least Squares Moving Average",
+    "shortTitle": "LSMA"
+  },
+  {
+    "id": "LaguerreRSI",
+    "title": "Laguerre RSI",
+    "shortTitle": "LRSI"
+  },
+  {
+    "id": "LeledcLevels",
+    "title": "Leledc Levels",
+    "shortTitle": "Leledc"
+  },
+  {
+    "id": "LinRegCandles",
+    "title": "Linear Regression Candles",
+    "shortTitle": "LRCandle"
+  },
+  {
+    "id": "LinearRegressionChannel",
+    "title": "Linear Regression Channel",
+    "shortTitle": "LRC"
+  },
+  {
+    "id": "LongLowerShadow",
+    "title": "Long Lower Shadow",
+    "shortTitle": "LLS"
+  },
+  {
+    "id": "LongUpperShadow",
+    "title": "Long Upper Shadow",
+    "shortTitle": "LUS"
+  },
+  {
+    "id": "LucidSar",
+    "title": "Lucid SAR",
+    "shortTitle": "LSAR"
+  },
+  {
+    "id": "MAADX",
+    "title": "Moving Average ADX",
+    "shortTitle": "MAADX"
+  },
+  {
+    "id": "MACD",
+    "title": "Moving Average Convergence Divergence",
+    "shortTitle": "MACD"
+  },
+  {
+    "id": "MACD4C",
+    "title": "MACD 4C",
+    "shortTitle": "MACD4C"
+  },
+  {
+    "id": "MACDAS",
+    "title": "MACDAS",
+    "shortTitle": "MACDAS"
+  },
+  {
+    "id": "MACDBB",
+    "title": "AK MACD BB",
+    "shortTitle": "MACDBB"
+  },
+  {
+    "id": "MACDCrossover",
+    "title": "MACD Crossover",
+    "shortTitle": "MACDCross"
+  },
+  {
+    "id": "MACDDEMA",
+    "title": "MACD DEMA",
+    "shortTitle": "MACDDEMA"
+  },
+  {
+    "id": "MACDDivergence",
+    "title": "MACD Divergence",
+    "shortTitle": "MACDDiv"
+  },
+  {
+    "id": "MACDLeader",
+    "title": "MACD Leader",
+    "shortTitle": "MACDLeader"
+  },
+  {
+    "id": "MACDVXI",
+    "title": "MACD VXI",
+    "shortTitle": "MACDVXI"
+  },
+  {
+    "id": "MAColored",
+    "title": "Moving Average Colored",
+    "shortTitle": "MAC"
+  },
+  {
+    "id": "MAConverging",
+    "title": "Moving Average Converging",
+    "shortTitle": "MA Converging"
+  },
+  {
+    "id": "MACross",
+    "title": "MA Cross",
+    "shortTitle": "MA Cross"
+  },
+  {
+    "id": "MADeviationRate",
+    "title": "Moving Average Deviation Rate",
+    "shortTitle": "MADR"
+  },
+  {
+    "id": "MARibbon",
+    "title": "Moving Average Ribbon",
+    "shortTitle": "MA Ribbon"
+  },
+  {
+    "id": "MAShadedFill",
+    "title": "MA Shaded Fill Crossover",
+    "shortTitle": "MASF"
+  },
+  {
+    "id": "MAShift",
+    "title": "Moving Average Shift",
+    "shortTitle": "MAS"
+  },
+  {
+    "id": "MFI",
+    "title": "Money Flow Index",
+    "shortTitle": "MFI"
+  },
+  {
+    "id": "MFIRSIBollingerBands",
+    "title": "MFI/RSI Bollinger Bands",
+    "shortTitle": "MFIRSBB"
+  },
+  {
+    "id": "MOSTRSI",
+    "title": "MOST on RSI",
+    "shortTitle": "MOST-RSI"
+  },
+  {
+    "id": "MadridMaRibbon",
+    "title": "Madrid MA Ribbon",
+    "shortTitle": "MAR"
+  },
+  {
+    "id": "MadridTrendSqueeze",
+    "title": "Madrid Trend Squeeze",
+    "shortTitle": "MTS"
+  },
+  {
+    "id": "MarketCipherA",
+    "title": "Market Cipher A",
+    "shortTitle": "MCA"
+  },
+  {
+    "id": "MarketCipherB",
+    "title": "Market Cipher B",
+    "shortTitle": "MCB"
+  },
+  {
+    "id": "MarketShiftLevels",
+    "title": "Market Shift Levels",
+    "shortTitle": "MSL"
+  },
+  {
+    "id": "MarubozuBlack",
+    "title": "Marubozu Black",
+    "shortTitle": "MB"
+  },
+  {
+    "id": "MarubozuWhite",
+    "title": "Marubozu White",
+    "shortTitle": "MW"
+  },
+  {
+    "id": "MassIndex",
+    "title": "Mass Index",
+    "shortTitle": "MI"
+  },
+  {
+    "id": "MatrixSeries",
+    "title": "Matrix Series",
+    "shortTitle": "MTX"
+  },
+  {
+    "id": "MavilimW",
+    "title": "MavilimW",
+    "shortTitle": "MAVW"
+  },
+  {
+    "id": "McGinleyDynamic",
+    "title": "McGinley Dynamic",
+    "shortTitle": "MD"
+  },
+  {
+    "id": "Median",
+    "title": "Median",
+    "shortTitle": "Median"
+  },
+  {
+    "id": "MlAdaptiveSupertrend",
+    "title": "ML Adaptive SuperTrend",
+    "shortTitle": "MLAST"
+  },
+  {
+    "id": "MlKnnStrategy",
+    "title": "ML: kNN Strategy",
+    "shortTitle": "kNN"
+  },
+  {
+    "id": "MlMomentumIndex",
+    "title": "ML Momentum Index",
+    "shortTitle": "MLMI"
+  },
+  {
+    "id": "MlMovingAverage",
+    "title": "ML Moving Average",
+    "shortTitle": "MLMA"
+  },
+  {
+    "id": "MlRsi",
+    "title": "ML RSI",
+    "shortTitle": "MLRSI"
+  },
+  {
+    "id": "ModifiedHeikinAshi",
+    "title": "Modified Heikin-Ashi",
+    "shortTitle": "ModHA"
+  },
+  {
+    "id": "Momentum",
+    "title": "Momentum",
+    "shortTitle": "Mom"
+  },
+  {
+    "id": "MomentumZigZag",
+    "title": "Momentum-based ZigZag",
+    "shortTitle": "MomZZ"
+  },
+  {
+    "id": "MoonPhases",
+    "title": "Moon Phases",
+    "shortTitle": "Moon"
+  },
+  {
+    "id": "MorningDojiStar",
+    "title": "Morning Doji Star",
+    "shortTitle": "MDS"
+  },
+  {
+    "id": "MorningStar",
+    "title": "Morning Star",
+    "shortTitle": "MS"
+  },
+  {
+    "id": "MultipleMA",
+    "title": "Multiple Moving Averages",
+    "shortTitle": "MMA"
+  },
+  {
+    "id": "MurreysOscillator",
+    "title": "Murrey's Math Oscillator",
+    "shortTitle": "MMO"
+  },
+  {
+    "id": "NRTR",
+    "title": "Nick Rypock Trailing Reverse",
+    "shortTitle": "NRTR"
+  },
+  {
+    "id": "NetVolume",
+    "title": "Net Volume",
+    "shortTitle": "Net Vol"
+  },
+  {
+    "id": "NormalizedQQE",
+    "title": "Normalized QQE",
+    "shortTitle": "nQQE"
+  },
+  {
+    "id": "OBV",
+    "title": "On Balance Volume",
+    "shortTitle": "OBV"
+  },
+  {
+    "id": "OBVMACD",
+    "title": "OBV MACD",
+    "shortTitle": "OBVMACD"
+  },
+  {
+    "id": "OBVOscillator",
+    "title": "OBV Oscillator",
+    "shortTitle": "OBVOsc"
+  },
+  {
+    "id": "OTTBands",
+    "title": "OTT Bands",
+    "shortTitle": "OTTBands"
+  },
+  {
+    "id": "OTTO",
+    "title": "OTT Oscillator",
+    "shortTitle": "OTTO"
+  },
+  {
+    "id": "OnNeck",
+    "title": "On Neck",
+    "shortTitle": "ON"
+  },
+  {
+    "id": "OptimizedTrendTracker",
+    "title": "Optimized Trend Tracker",
+    "shortTitle": "OTT"
+  },
+  {
+    "id": "PMaxRSIT3",
+    "title": "PMax on RSI with T3",
+    "shortTitle": "PMaxRSIT3"
+  },
+  {
+    "id": "PPOAlerts",
+    "title": "PPO Alerts",
+    "shortTitle": "PPOAlerts"
+  },
+  {
+    "id": "PPODivergence",
+    "title": "PPO Divergence",
+    "shortTitle": "PPODiv"
+  },
+  {
+    "id": "PVT",
+    "title": "Price Volume Trend",
+    "shortTitle": "PVT"
+  },
+  {
+    "id": "ParabolicRSI",
+    "title": "Parabolic RSI",
+    "shortTitle": "PRSI"
+  },
+  {
+    "id": "ParabolicSAR",
+    "title": "Parabolic SAR",
+    "shortTitle": "SAR"
+  },
+  {
+    "id": "ParallelPivotLines",
+    "title": "Parallel Pivot Lines",
+    "shortTitle": "PPL"
+  },
+  {
+    "id": "PhilakoneEMASwing",
+    "title": "Philakone 55 EMA Swing Trading",
+    "shortTitle": "P55EMA"
+  },
+  {
+    "id": "Piercing",
+    "title": "Piercing",
+    "shortTitle": "P"
+  },
+  {
+    "id": "PivotHhHlLhLl",
+    "title": "Pivot Points HH/HL/LH/LL",
+    "shortTitle": "PivotHHLL"
+  },
+  {
+    "id": "PivotPointSupertrend",
+    "title": "Pivot Point SuperTrend",
+    "shortTitle": "PPST"
+  },
+  {
+    "id": "PivotTrailingMaxMin",
+    "title": "Pivot Based Trailing Maxima & Minima",
+    "shortTitle": "Pivot Trail MaxMin"
+  },
+  {
+    "id": "PredictiveChannels",
+    "title": "Predictive Channels",
+    "shortTitle": "PC"
+  },
+  {
+    "id": "PremierRSI",
+    "title": "Premier RSI Oscillator",
+    "shortTitle": "PRO"
+  },
+  {
+    "id": "PremierStochastic",
+    "title": "Premier Stochastic Oscillator",
+    "shortTitle": "PSO"
+  },
+  {
+    "id": "PriceActionSystem",
+    "title": "Price Action Trading System",
+    "shortTitle": "PATS"
+  },
+  {
+    "id": "PriceMomentumOscillator",
+    "title": "Price Momentum Oscillator",
+    "shortTitle": "PMO"
+  },
+  {
+    "id": "PriceOscillator",
+    "title": "Price Oscillator",
+    "shortTitle": "PPO"
+  },
+  {
+    "id": "ProfitMaximizer",
+    "title": "Profit Maximizer",
+    "shortTitle": "PMax"
+  },
+  {
+    "id": "QQE",
+    "title": "Quantitative Qualitative Estimation",
+    "shortTitle": "QQE"
+  },
+  {
+    "id": "QQEMod",
+    "title": "QQE MOD",
+    "shortTitle": "QQEM"
+  },
+  {
+    "id": "QQESignals",
+    "title": "QQE Signals",
+    "shortTitle": "QQESig"
+  },
+  {
+    "id": "RCI3Lines",
+    "title": "RCI 3 Lines",
+    "shortTitle": "RCI3"
+  },
+  {
+    "id": "RCIRibbon",
+    "title": "RCI Ribbon",
+    "shortTitle": "RCI Ribbon"
+  },
+  {
+    "id": "RMA",
+    "title": "Smoothed Moving Average",
+    "shortTitle": "SMMA"
+  },
+  {
+    "id": "RMITrendSniper",
+    "title": "RMI Trend Sniper",
+    "shortTitle": "RMI Sniper"
+  },
+  {
+    "id": "ROC",
+    "title": "Rate Of Change",
+    "shortTitle": "ROC"
+  },
+  {
+    "id": "RSI",
+    "title": "Relative Strength Index",
+    "shortTitle": "RSI"
+  },
+  {
+    "id": "RSIBBDispersion",
+    "title": "RSI + BB + Dispersion",
+    "shortTitle": "RSIBB"
+  },
+  {
+    "id": "RSIBands",
+    "title": "RSI Bands",
+    "shortTitle": "RSIB"
+  },
+  {
+    "id": "RSICandles",
+    "title": "RSI Candles",
+    "shortTitle": "RSIC"
+  },
+  {
+    "id": "RSICyclicSmoothed",
+    "title": "RSI Cyclic Smoothed",
+    "shortTitle": "RSICS"
+  },
+  {
+    "id": "RSIDivergence",
+    "title": "RSI Divergence",
+    "shortTitle": "RSIDiv"
+  },
+  {
+    "id": "RSIHistoAlert",
+    "title": "RSI HistoAlert",
+    "shortTitle": "RSIHist"
+  },
+  {
+    "id": "RSISnabbel",
+    "title": "RSI Snabbel",
+    "shortTitle": "RSISnab"
+  },
+  {
+    "id": "RSISwingSignal",
+    "title": "RSI Swing Signal",
+    "shortTitle": "RSISwing"
+  },
+  {
+    "id": "RSSupportResistance",
+    "title": "[RS] Support and Resistance V0",
+    "shortTitle": "RS S/R"
+  },
+  {
+    "id": "RVI",
+    "title": "Relative Vigor Index",
+    "shortTitle": "RVGI"
+  },
+  {
+    "id": "RadiusTrend",
+    "title": "Radius Trend [ChartPrime]",
+    "shortTitle": "RadTrend"
+  },
+  {
+    "id": "RangeDetector",
+    "title": "Range Detector",
+    "shortTitle": "RangeDet"
+  },
+  {
+    "id": "RangeFilterDW",
+    "title": "Range Filter [DW]",
+    "shortTitle": "RngFilt"
+  },
+  {
+    "id": "RangeIdentifier",
+    "title": "Range Identifier",
+    "shortTitle": "RangeID"
+  },
+  {
+    "id": "RankCorrelationIndex",
+    "title": "Rank Correlation Index",
+    "shortTitle": "RCI"
+  },
+  {
+    "id": "RealtimeVolumeBars",
+    "title": "Realtime Volume Bars",
+    "shortTitle": "VolBuySell"
+  },
+  {
+    "id": "RedKMomentumBars",
+    "title": "RedK Momentum Bars",
+    "shortTitle": "MoBars"
+  },
+  {
+    "id": "RedKRSSWMA",
+    "title": "RedK RSS_WMA",
+    "shortTitle": "RSS"
+  },
+  {
+    "id": "RedKTPX",
+    "title": "RedK Trader Pressure Index",
+    "shortTitle": "RedK TPX"
+  },
+  {
+    "id": "RedKVADER",
+    "title": "RedK VADER",
+    "shortTitle": "VADER"
+  },
+  {
+    "id": "RelativeVolatilityIndex",
+    "title": "Relative Volatility Index",
+    "shortTitle": "RVI"
+  },
+  {
+    "id": "RelativeVolumeAtTime",
+    "title": "Relative Volume at Time",
+    "shortTitle": "RelVol"
+  },
+  {
+    "id": "ReversalCandleSetup",
+    "title": "Reversal Candle Setup",
+    "shortTitle": "RevCdl"
+  },
+  {
+    "id": "RipsterEMAClouds",
+    "title": "Ripster EMA Clouds",
+    "shortTitle": "REC"
+  },
+  {
+    "id": "RisingThreeMethods",
+    "title": "Rising Three Methods",
+    "shortTitle": "RTM"
+  },
+  {
+    "id": "RisingWindow",
+    "title": "Rising Window",
+    "shortTitle": "RW"
+  },
+  {
+    "id": "RsiMomentumDivergence",
+    "title": "RSI Momentum Divergence",
+    "shortTitle": "RSIM Div"
+  },
+  {
+    "id": "SAREMAMACDSignals",
+    "title": "SAR + EMA + MACD Signals",
+    "shortTitle": "SEM"
+  },
+  {
+    "id": "SMA",
+    "title": "Simple Moving Average",
+    "shortTitle": "SMA"
+  },
+  {
+    "id": "SMIErgodic",
+    "title": "SMI Ergodic Indicator",
+    "shortTitle": "SMII"
+  },
+  {
+    "id": "SMIErgodicOscillator",
+    "title": "SMI Ergodic Oscillator",
+    "shortTitle": "SMIO"
+  },
+  {
+    "id": "SMIUCS",
+    "title": "Stochastic Momentum Index UCS",
+    "shortTitle": "SMIUCS"
+  },
+  {
+    "id": "SMMA",
+    "title": "Smoothed Moving Average",
+    "shortTitle": "SMMA"
+  },
+  {
+    "id": "SRLevelsBreaks",
+    "title": "Support and Resistance Levels with Breaks",
+    "shortTitle": "S/R Breaks"
+  },
+  {
+    "id": "SSLChannel",
+    "title": "SSL Channel",
+    "shortTitle": "SSL"
+  },
+  {
+    "id": "ST0P",
+    "title": "ST0P",
+    "shortTitle": "ST0P"
+  },
+  {
+    "id": "ScalpingLine",
+    "title": "Scalping Line",
+    "shortTitle": "SLI"
+  },
+  {
+    "id": "SchaffTrendCycle",
+    "title": "Schaff Trend Cycle",
+    "shortTitle": "STC"
+  },
+  {
+    "id": "SellBuyRates",
+    "title": "Sell & Buy Rates",
+    "shortTitle": "SBR"
+  },
+  {
+    "id": "ShootingStar",
+    "title": "Shooting Star",
+    "shortTitle": "SS"
+  },
+  {
+    "id": "SignalMA",
+    "title": "Signal Moving Average",
+    "shortTitle": "SigMA"
+  },
+  {
+    "id": "SimpleMovingAverages",
+    "title": "Simple Moving Averages",
+    "shortTitle": "SMAs"
+  },
+  {
+    "id": "SlowHeikenAshi",
+    "title": "Slow Heiken Ashi",
+    "shortTitle": "SlowHA"
+  },
+  {
+    "id": "SmoothedHeikenAshi",
+    "title": "Smoothed Heiken Ashi",
+    "shortTitle": "SmHA"
+  },
+  {
+    "id": "SpinningTopBlack",
+    "title": "Spinning Top Black",
+    "shortTitle": "STB"
+  },
+  {
+    "id": "SpinningTopWhite",
+    "title": "Spinning Top White",
+    "shortTitle": "STW"
+  },
+  {
+    "id": "SqueezeMomentum",
+    "title": "Squeeze Momentum",
+    "shortTitle": "SQZMOM"
+  },
+  {
+    "id": "SqueezeMomentumV2",
+    "title": "Squeeze Momentum V2",
+    "shortTitle": "SQZMOMV2"
+  },
+  {
+    "id": "StandardDeviation",
+    "title": "Standard Deviation",
+    "shortTitle": "StDev"
+  },
+  {
+    "id": "StochPOP1",
+    "title": "CM Stochastic POP Method 1",
+    "shortTitle": "StochPOP1"
+  },
+  {
+    "id": "StochPOP2",
+    "title": "CM Stochastic POP Method 2",
+    "shortTitle": "StochPOP2"
+  },
+  {
+    "id": "StochRSI",
+    "title": "Stochastic RSI",
+    "shortTitle": "Stoch RSI"
+  },
+  {
+    "id": "StochVX3",
+    "title": "Stoch VX3",
+    "shortTitle": "StochVX3"
+  },
+  {
+    "id": "Stochastic",
+    "title": "Stochastic",
+    "shortTitle": "Stoch"
+  },
+  {
+    "id": "StochasticMomentumIndex",
+    "title": "Stochastic Momentum Index",
+    "shortTitle": "SMI"
+  },
+  {
+    "id": "StochasticOTT",
+    "title": "Stochastic OTT",
+    "shortTitle": "StochOTT"
+  },
+  {
+    "id": "SuperSmoothedMACD",
+    "title": "Super Smoothed MACD",
+    "shortTitle": "SSMACD"
+  },
+  {
+    "id": "SuperSupertrend",
+    "title": "Super SuperTrend",
+    "shortTitle": "SST"
+  },
+  {
+    "id": "Supertrend",
+    "title": "Supertrend",
+    "shortTitle": "ST"
+  },
+  {
+    "id": "SupertrendAiClustering",
+    "title": "SuperTrend AI Clustering",
+    "shortTitle": "STAI"
+  },
+  {
+    "id": "SupertrendCCI",
+    "title": "BEST Supertrend CCI",
+    "shortTitle": "ST-CCI"
+  },
+  {
+    "id": "SupertrendChannels",
+    "title": "SuperTrend Channels",
+    "shortTitle": "STCh"
+  },
+  {
+    "id": "SupertrendLadder",
+    "title": "SuperTrend Ladder ATR",
+    "shortTitle": "STLadder"
+  },
+  {
+    "id": "SwingHighsLowsPatterns",
+    "title": "Swing Highs/Lows & Candle Patterns",
+    "shortTitle": "SwingPat"
+  },
+  {
+    "id": "SwingTradeSignals",
+    "title": "Swing Trade Signals",
+    "shortTitle": "STS"
+  },
+  {
+    "id": "T3Psar",
+    "title": "TKP T3 Trend with PSAR",
+    "shortTitle": "T3+SAR"
+  },
+  {
+    "id": "TDIHLCTrix",
+    "title": "Traders Dynamic Index",
+    "shortTitle": "TDI"
+  },
+  {
+    "id": "TDMacd",
+    "title": "TDMacd",
+    "shortTitle": "MACD"
+  },
+  {
+    "id": "TEMA",
+    "title": "Triple EMA",
+    "shortTitle": "TEMA"
+  },
+  {
+    "id": "TMABands",
+    "title": "TMA Bands",
+    "shortTitle": "TMA"
+  },
+  {
+    "id": "TRAMA",
+    "title": "Trend Regularity Adaptive MA",
+    "shortTitle": "TRAMA"
+  },
+  {
+    "id": "TRIX",
+    "title": "TRIX",
+    "shortTitle": "TRIX"
+  },
+  {
+    "id": "TSI",
+    "title": "True Strength Index",
+    "shortTitle": "TSI"
+  },
+  {
+    "id": "TTMSqueezePro",
+    "title": "TTM Squeeze Pro",
+    "shortTitle": "TTMSqzPro"
+  },
+  {
+    "id": "TWAP",
+    "title": "Time Weighted Average Price",
+    "shortTitle": "TWAP"
+  },
+  {
+    "id": "ThreeBlackCrows",
+    "title": "Three Black Crows",
+    "shortTitle": "3BC"
+  },
+  {
+    "id": "ThreeMovingAverages",
+    "title": "Three Moving Averages",
+    "shortTitle": "3MA"
+  },
+  {
+    "id": "ThreeWhiteSoldiers",
+    "title": "Three White Soldiers",
+    "shortTitle": "3WS"
+  },
+  {
+    "id": "TillsonT3",
+    "title": "Tillson T3",
+    "shortTitle": "T3"
+  },
+  {
+    "id": "TonyUXScalper",
+    "title": "TonyUX EMA Scalper",
+    "shortTitle": "TUX EMA Scalper"
+  },
+  {
+    "id": "TopBottomCandle",
+    "title": "Top & Bottom Candle",
+    "shortTitle": "UCS_T&B"
+  },
+  {
+    "id": "TopsBottoms",
+    "title": "Tops/Bottoms",
+    "shortTitle": "TB"
+  },
+  {
+    "id": "TraderXO",
+    "title": "Trader XO Macro Trend Scanner",
+    "shortTitle": "TraderXO"
+  },
+  {
+    "id": "TransientZones",
+    "title": "Transient Zones v1.1",
+    "shortTitle": "TZ"
+  },
+  {
+    "id": "TrendFollowingMA",
+    "title": "Trend Following Moving Averages",
+    "shortTitle": "TFMA"
+  },
+  {
+    "id": "TrendLineAuto",
+    "title": "Trend Line Auto",
+    "shortTitle": "TrendLine"
+  },
+  {
+    "id": "TrendMagic",
+    "title": "Trend Magic",
+    "shortTitle": "TM"
+  },
+  {
+    "id": "TrendStrengthIndex",
+    "title": "Trend Strength Index",
+    "shortTitle": "TSI"
+  },
+  {
+    "id": "TrendTrader",
+    "title": "Trend Trader Strategy",
+    "shortTitle": "TrendTrader"
+  },
+  {
+    "id": "TrendTriggerFactor",
+    "title": "Trend Trigger Factor",
+    "shortTitle": "TTF"
+  },
+  {
+    "id": "TriStarBearish",
+    "title": "Tri-Star Bearish",
+    "shortTitle": "3S"
+  },
+  {
+    "id": "TriStarBullish",
+    "title": "Tri-Star Bullish",
+    "shortTitle": "3S"
+  },
+  {
+    "id": "TriangularMomentumOsc",
+    "title": "Triangular Momentum Oscillator",
+    "shortTitle": "TMO"
+  },
+  {
+    "id": "TripleMAForecast",
+    "title": "Triple MA Forecast",
+    "shortTitle": "3MAF"
+  },
+  {
+    "id": "TurtleTradeChannels",
+    "title": "Turtle Trade Channels",
+    "shortTitle": "TTC"
+  },
+  {
+    "id": "TweezerBottom",
+    "title": "Tweezer Bottom",
+    "shortTitle": "TB"
+  },
+  {
+    "id": "TweezerTop",
+    "title": "Tweezer Top",
+    "shortTitle": "TT"
+  },
+  {
+    "id": "TweezersKangarooTail",
+    "title": "Tweezers & Kangaroo Tail",
+    "shortTitle": "Tweez/Kang"
+  },
+  {
+    "id": "TwinRangeFilter",
+    "title": "Twin Range Filter",
+    "shortTitle": "TRF"
+  },
+  {
+    "id": "UTBot",
+    "title": "UT Bot",
+    "shortTitle": "UTBot"
+  },
+  {
+    "id": "UltimateOscillator",
+    "title": "Ultimate Oscillator",
+    "shortTitle": "UO"
+  },
+  {
+    "id": "UltimateRSI",
+    "title": "Ultimate RSI [LuxAlgo]",
+    "shortTitle": "URSI"
+  },
+  {
+    "id": "UpsideTasukiGap",
+    "title": "Upside Tasuki Gap",
+    "shortTitle": "UTG"
+  },
+  {
+    "id": "VPCI",
+    "title": "Volume Price Confirmation Indicator",
+    "shortTitle": "VPCI"
+  },
+  {
+    "id": "VWMA",
+    "title": "Volume Weighted Moving Average",
+    "shortTitle": "VWMA"
+  },
+  {
+    "id": "VWMACDSZO",
+    "title": "VWMACD & SZO",
+    "shortTitle": "VWMACDSZO"
+  },
+  {
+    "id": "VWMACDV2",
+    "title": "Volume Weighted MACD V2",
+    "shortTitle": "VWMACDV2"
+  },
+  {
+    "id": "VariableMA",
+    "title": "Variable Moving Average",
+    "shortTitle": "VMA"
+  },
+  {
+    "id": "VdubSniper",
+    "title": "Vdub FX Sniper",
+    "shortTitle": "VSniper"
+  },
+  {
+    "id": "VdubusBinaryPro",
+    "title": "vdubus BinaryPro",
+    "shortTitle": "VBP"
+  },
+  {
+    "id": "VervoortHAOscillator",
+    "title": "Vervoort HA LT Candlestick Oscillator",
+    "shortTitle": "VHO"
+  },
+  {
+    "id": "VolumaticSRLevels",
+    "title": "Volumatic S/R Levels",
+    "shortTitle": "VolSR"
+  },
+  {
+    "id": "VolumeAccumulationPct",
+    "title": "Volume Accumulation Percentage",
+    "shortTitle": "VA%"
+  },
+  {
+    "id": "VolumeBarBreakout",
+    "title": "Volume Bar Breakout",
+    "shortTitle": "VolBreak"
+  },
+  {
+    "id": "VolumeColoredBars",
+    "title": "Volume Colored Bars",
+    "shortTitle": "VCBars"
+  },
+  {
+    "id": "VolumeDelta",
+    "title": "Volume Delta",
+    "shortTitle": "Vol Delta"
+  },
+  {
+    "id": "VolumeDivergence",
+    "title": "Volume Divergence",
+    "shortTitle": "VolDiv"
+  },
+  {
+    "id": "VolumeFlowIndicator",
+    "title": "Volume Flow Indicator",
+    "shortTitle": "VFI"
+  },
+  {
+    "id": "VolumeFlowV3",
+    "title": "Volume Flow v3",
+    "shortTitle": "VFv3"
+  },
+  {
+    "id": "VolumeFootprint",
+    "title": "Volume Footprint",
+    "shortTitle": "VFP"
+  },
+  {
+    "id": "VolumeLinRegTrend",
+    "title": "Volume-Supported Linear Regression Trend",
+    "shortTitle": "VSLRT"
+  },
+  {
+    "id": "VolumeOscillator",
+    "title": "Volume Oscillator",
+    "shortTitle": "Vol Osc"
+  },
+  {
+    "id": "VolumeSuperTrendAi",
+    "title": "Volume SuperTrend AI",
+    "shortTitle": "VSTAI"
+  },
+  {
+    "id": "VortexIndicator",
+    "title": "Vortex Indicator",
+    "shortTitle": "VI"
+  },
+  {
+    "id": "VuManChuSwing",
+    "title": "VuManChu Swing Free",
+    "shortTitle": "VMC Swing"
+  },
+  {
+    "id": "VwapMvwapEmaCrossover",
+    "title": "VWAP/MVWAP/EMA Crossover",
+    "shortTitle": "VWAP-X"
+  },
+  {
+    "id": "WMA",
+    "title": "Moving Average Weighted",
+    "shortTitle": "WMA"
+  },
+  {
+    "id": "WaddahAttarExplosion",
+    "title": "Waddah Attar Explosion",
+    "shortTitle": "WAE"
+  },
+  {
+    "id": "WaveTrend",
+    "title": "WaveTrend",
+    "shortTitle": "WT"
+  },
+  {
+    "id": "WeightedMAFunction",
+    "title": "Beta-Weighted Moving Average",
+    "shortTitle": "BWMA"
+  },
+  {
+    "id": "WeisWaveVolume",
+    "title": "Weis Wave Volume",
+    "shortTitle": "WWV"
+  },
+  {
+    "id": "WickedFractals",
+    "title": "WICK.ED Fractals",
+    "shortTitle": "WFrac"
+  },
+  {
+    "id": "WilliamsAlligator",
+    "title": "Williams Alligator",
+    "shortTitle": "Alligator"
+  },
+  {
+    "id": "WilliamsCombo",
+    "title": "Williams Alligator + Fractals",
+    "shortTitle": "WilliamsCombo"
+  },
+  {
+    "id": "WilliamsFractals",
+    "title": "Williams Fractals",
+    "shortTitle": "Fractals"
+  },
+  {
+    "id": "WilliamsPercentRange",
+    "title": "Williams %R",
+    "shortTitle": "%R"
+  },
+  {
+    "id": "WilliamsVixFix",
+    "title": "Williams Vix Fix",
+    "shortTitle": "WVF"
+  },
+  {
+    "id": "WoodiesCCI",
+    "title": "Woodies CCI",
+    "shortTitle": "WCCI"
+  },
+  {
+    "id": "ZLSMA",
+    "title": "Zero Lag LSMA",
+    "shortTitle": "ZLSMA"
+  },
+  {
+    "id": "ZeroLagEMA",
+    "title": "Zero Lag EMA",
+    "shortTitle": "ZLEMA"
+  },
+  {
+    "id": "ZeroLagMACD",
+    "title": "Zero Lag MACD",
+    "shortTitle": "ZLMACD"
+  },
+  {
+    "id": "ZigZag",
+    "title": "Zig Zag",
+    "shortTitle": "ZigZag"
+  },
+  {
+    "id": "ZlmaTrendLevels",
+    "title": "Zero-Lag MA Trend Levels",
+    "shortTitle": "ZLMA-TL"
+  }
+]

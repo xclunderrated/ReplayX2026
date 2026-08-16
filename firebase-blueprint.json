@@ -1,0 +1,38 @@
+{
+  "entities": {
+    "Workspace": {
+      "title": "Workspace",
+      "description": "User trading simulator workspace data containing sessions, strategies, trades, and configuration.",
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "number",
+          "description": "Workspace data schema version"
+        },
+        "appName": {
+          "type": "string",
+          "description": "App identifier"
+        },
+        "deviceId": {
+          "type": "string",
+          "description": "Device identifier of the saving client"
+        },
+        "updatedAtMs": {
+          "type": "number",
+          "description": "Unix timestamp in milliseconds of the last update"
+        },
+        "workspaceState": {
+          "type": "object",
+          "description": "Full serialized workspace simulator state"
+        }
+      },
+      "required": ["version", "updatedAtMs", "workspaceState"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/workspaces/{workspaceId}": {
+      "schema": "Workspace",
+      "description": "Stores user-specific private workspace simulator data backups"
+    }
+  }
+}

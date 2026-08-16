@@ -1,0 +1,6 @@
+{
+  "name": "Dukascopy Chart Replay",
+  "description": "Professional web application for downloading real Dukascopy market data, conducting tick-precision TradingView bar replays, paper trading backtesting, and AI technical market analysis.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

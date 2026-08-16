@@ -1,0 +1,722 @@
+{
+  "0005hkhkd": {
+    "name": "0005.HK/HKD",
+    "description": "HSBC Holdings",
+    "decimalFactor": 1e3,
+    "startHourForTicks": "2018-01-02T01:30:00.012Z",
+    "startDayForMinuteCandles": "2018-01-02T01:30:00.000Z",
+    "startMonthForHourlyCandles": "2018-01-02T01:00:00.000Z",
+    "startYearForDailyCandles": "2018-01-02T00:00:00.000Z"
+  },
+  "eurusd": {
+    "name": "EUR/USD",
+    "description": "Euro / US Dollar",
+    "decimalFactor": 1e5,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "gbpusd": {
+    "name": "GBP/USD",
+    "description": "British Pound / US Dollar",
+    "decimalFactor": 1e5,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "usdjpy": {
+    "name": "USD/JPY",
+    "description": "US Dollar / Japanese Yen",
+    "decimalFactor": 1e3,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "audusd": {
+    "name": "AUD/USD",
+    "description": "Australian Dollar / US Dollar",
+    "decimalFactor": 1e5,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "usdcad": {
+    "name": "USD/CAD",
+    "description": "US Dollar / Canadian Dollar",
+    "decimalFactor": 1e5,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "usdchf": {
+    "name": "USD/CHF",
+    "description": "US Dollar / Swiss Franc",
+    "decimalFactor": 1e5,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "nzdusd": {
+    "name": "NZD/USD",
+    "description": "New Zealand Dollar / US Dollar",
+    "decimalFactor": 1e5,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "eurgbp": {
+    "name": "EUR/GBP",
+    "description": "Euro / British Pound",
+    "decimalFactor": 1e5,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "eurjpy": {
+    "name": "EUR/JPY",
+    "description": "Euro / Japanese Yen",
+    "decimalFactor": 1e3,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "gbpjpy": {
+    "name": "GBP/JPY",
+    "description": "British Pound / Japanese Yen",
+    "decimalFactor": 1e3,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "audjpy": {
+    "name": "AUD/JPY",
+    "description": "Australian Dollar / Japanese Yen",
+    "decimalFactor": 1e3,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "euraud": {
+    "name": "EUR/AUD",
+    "description": "Euro / Australian Dollar",
+    "decimalFactor": 1e5,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "gbpcad": {
+    "name": "GBP/CAD",
+    "description": "British Pound / Canadian Dollar",
+    "decimalFactor": 1e5,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "cadjpy": {
+    "name": "CAD/JPY",
+    "description": "Canadian Dollar / Japanese Yen",
+    "decimalFactor": 1e3,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "eurchf": {
+    "name": "EUR/CHF",
+    "description": "Euro / Swiss Franc",
+    "decimalFactor": 1e5,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "eurcad": {
+    "name": "EUR/CAD",
+    "description": "Euro / Canadian Dollar",
+    "decimalFactor": 1e5,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "eurnzd": {
+    "name": "EUR/NZD",
+    "description": "Euro / New Zealand Dollar",
+    "decimalFactor": 1e5,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "gbpchf": {
+    "name": "GBP/CHF",
+    "description": "British Pound / Swiss Franc",
+    "decimalFactor": 1e5,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "gbpaud": {
+    "name": "GBP/AUD",
+    "description": "British Pound / Australian Dollar",
+    "decimalFactor": 1e5,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "gbpnzd": {
+    "name": "GBP/NZD",
+    "description": "British Pound / New Zealand Dollar",
+    "decimalFactor": 1e5,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "audcad": {
+    "name": "AUD/CAD",
+    "description": "Australian Dollar / Canadian Dollar",
+    "decimalFactor": 1e5,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "audchf": {
+    "name": "AUD/CHF",
+    "description": "Australian Dollar / Swiss Franc",
+    "decimalFactor": 1e5,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "audnzd": {
+    "name": "AUD/NZD",
+    "description": "Australian Dollar / New Zealand Dollar",
+    "decimalFactor": 1e5,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "cadchf": {
+    "name": "CAD/CHF",
+    "description": "Canadian Dollar / Swiss Franc",
+    "decimalFactor": 1e5,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "nzdjpy": {
+    "name": "NZD/JPY",
+    "description": "New Zealand Dollar / Japanese Yen",
+    "decimalFactor": 1e3,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "nzdcad": {
+    "name": "NZD/CAD",
+    "description": "New Zealand Dollar / Canadian Dollar",
+    "decimalFactor": 1e5,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "nzdchf": {
+    "name": "NZD/CHF",
+    "description": "New Zealand Dollar / Swiss Franc",
+    "decimalFactor": 1e5,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "chfjpy": {
+    "name": "CHF/JPY",
+    "description": "Swiss Franc / Japanese Yen",
+    "decimalFactor": 1e3,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "usdsgd": {
+    "name": "USD/SGD",
+    "description": "US Dollar / Singapore Dollar",
+    "decimalFactor": 1e5,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "usdhkd": {
+    "name": "USD/HKD",
+    "description": "US Dollar / Hong Kong Dollar",
+    "decimalFactor": 1e5,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "usdsek": {
+    "name": "USD/SEK",
+    "description": "US Dollar / Swedish Krona",
+    "decimalFactor": 1e5,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "usdnok": {
+    "name": "USD/NOK",
+    "description": "US Dollar / Norwegian Krone",
+    "decimalFactor": 1e5,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "usdzar": {
+    "name": "USD/ZAR",
+    "description": "US Dollar / South African Rand",
+    "decimalFactor": 1e5,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "usdtry": {
+    "name": "USD/TRY",
+    "description": "US Dollar / Turkish Lira",
+    "decimalFactor": 1e5,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "usdmxn": {
+    "name": "USD/MXN",
+    "description": "US Dollar / Mexican Peso",
+    "decimalFactor": 1e5,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "usdpln": {
+    "name": "USD/PLN",
+    "description": "US Dollar / Polish Zloty",
+    "decimalFactor": 1e5,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "eursgd": {
+    "name": "EUR/SGD",
+    "description": "Euro / Singapore Dollar",
+    "decimalFactor": 1e5,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "eursek": {
+    "name": "EUR/SEK",
+    "description": "Euro / Swedish Krona",
+    "decimalFactor": 1e5,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "eurnok": {
+    "name": "EUR/NOK",
+    "description": "Euro / Norwegian Krone",
+    "decimalFactor": 1e5,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "eurtry": {
+    "name": "EUR/TRY",
+    "description": "Euro / Turkish Lira",
+    "decimalFactor": 1e5,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "xauusd": {
+    "name": "XAU/USD",
+    "description": "Gold / US Dollar",
+    "decimalFactor": 1e2,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "xagusd": {
+    "name": "XAG/USD",
+    "description": "Silver / US Dollar",
+    "decimalFactor": 1e3,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "xaueur": {
+    "name": "XAU/EUR",
+    "description": "Gold / Euro",
+    "decimalFactor": 1e2,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "xageur": {
+    "name": "XAG/EUR",
+    "description": "Silver / Euro",
+    "decimalFactor": 1e3,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "xptusd": {
+    "name": "XPT/USD",
+    "description": "Platinum / US Dollar",
+    "decimalFactor": 1e2,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "xpdusd": {
+    "name": "XPD/USD",
+    "description": "Palladium / US Dollar",
+    "decimalFactor": 1e2,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "brentcmdusd": {
+    "name": "BRENT",
+    "description": "Brent Crude Oil",
+    "decimalFactor": 1e2,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "lightcmdusd": {
+    "name": "WTI",
+    "description": "WTI Crude Oil",
+    "decimalFactor": 1e2,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "gascmdusd": {
+    "name": "NGAS",
+    "description": "Natural Gas",
+    "decimalFactor": 1e3,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "coppercmdusd": {
+    "name": "COPPER",
+    "description": "High Grade Copper",
+    "decimalFactor": 1e3,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "btcusd": {
+    "name": "BTC/USD",
+    "description": "Bitcoin / US Dollar",
+    "decimalFactor": 1e2,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "ethusd": {
+    "name": "ETH/USD",
+    "description": "Ethereum / US Dollar",
+    "decimalFactor": 1e2,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "solusd": {
+    "name": "SOL/USD",
+    "description": "Solana / US Dollar",
+    "decimalFactor": 1e2,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "xrpusd": {
+    "name": "XRP/USD",
+    "description": "Ripple / US Dollar",
+    "decimalFactor": 1e4,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "ltcusd": {
+    "name": "LTC/USD",
+    "description": "Litecoin / US Dollar",
+    "decimalFactor": 1e2,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "bchusd": {
+    "name": "BCH/USD",
+    "description": "Bitcoin Cash / US Dollar",
+    "decimalFactor": 1e2,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "adausd": {
+    "name": "ADA/USD",
+    "description": "Cardano / US Dollar",
+    "decimalFactor": 1e4,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "dotusd": {
+    "name": "DOT/USD",
+    "description": "Polkadot / US Dollar",
+    "decimalFactor": 1e3,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "linkusd": {
+    "name": "LINK/USD",
+    "description": "Chainlink / US Dollar",
+    "decimalFactor": 1e3,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "dogeusd": {
+    "name": "DOGE/USD",
+    "description": "Dogecoin / US Dollar",
+    "decimalFactor": 1e5,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "avaxusd": {
+    "name": "AVAX/USD",
+    "description": "Avalanche / US Dollar",
+    "decimalFactor": 1e2,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "us500": {
+    "name": "US500",
+    "description": "S&P 500 Index",
+    "decimalFactor": 1e2,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "us30": {
+    "name": "US30",
+    "description": "Dow Jones 30 Index",
+    "decimalFactor": 1e1,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "ustecusd": {
+    "name": "NAS100",
+    "description": "Nasdaq 100 Index",
+    "decimalFactor": 1e2,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "deidxeur": {
+    "name": "GER40",
+    "description": "DAX 40 Index",
+    "decimalFactor": 1e1,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "ukidxgbp": {
+    "name": "UK100",
+    "description": "FTSE 100 Index",
+    "decimalFactor": 1e1,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "fridxeur": {
+    "name": "FRA40",
+    "description": "CAC 40 Index",
+    "decimalFactor": 1e1,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "jpidxjpy": {
+    "name": "JPN225",
+    "description": "Nikkei 225 Index",
+    "decimalFactor": 1e1,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "ausidxaud": {
+    "name": "AUS200",
+    "description": "ASX 200 Index",
+    "decimalFactor": 1e1,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "euidxeur": {
+    "name": "EU50",
+    "description": "Euro Stoxx 50 Index",
+    "decimalFactor": 1e1,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "hkidxhkd": {
+    "name": "HK50",
+    "description": "Hang Seng Index",
+    "decimalFactor": 1e1,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "chnidxcny": {
+    "name": "CHI50",
+    "description": "China A50 Index",
+    "decimalFactor": 1e1,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "aaplususd": {
+    "name": "AAPL",
+    "description": "Apple Inc.",
+    "decimalFactor": 1e2,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "msftususd": {
+    "name": "MSFT",
+    "description": "Microsoft Corporation",
+    "decimalFactor": 1e2,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "nvdaususd": {
+    "name": "NVDA",
+    "description": "NVIDIA Corporation",
+    "decimalFactor": 1e2,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "amznususd": {
+    "name": "AMZN",
+    "description": "Amazon.com Inc.",
+    "decimalFactor": 1e2,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "googususd": {
+    "name": "GOOGL",
+    "description": "Alphabet Inc.",
+    "decimalFactor": 1e2,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "tslaususd": {
+    "name": "TSLA",
+    "description": "Tesla Inc.",
+    "decimalFactor": 1e2,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  },
+  "metaususd": {
+    "name": "META",
+    "description": "Meta Platforms Inc.",
+    "decimalFactor": 1e2,
+    "startHourForTicks": "2003-05-04T00:00:00.000Z",
+    "startDayForMinuteCandles": "2003-05-04T00:00:00.000Z",
+    "startMonthForHourlyCandles": "2003-05-04T00:00:00.000Z",
+    "startYearForDailyCandles": "2003-05-04T00:00:00.000Z"
+  }
+}
