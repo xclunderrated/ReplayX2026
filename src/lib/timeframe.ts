@@ -365,12 +365,6 @@ export function findCandleIndexByTimestamp(baseM1Candles: Candle[], targetTimeMs
   return findIndexForTimestamp(baseM1Candles, targetTimeMs);
 }
 
-export function formatUTCTimestamp(timestampMs: number): string {
-  if (!timestampMs) return '';
-  const date = new Date(timestampMs);
-  return date.toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
-}
-
 // ─── Legacy compatibility functions ──────────────────────────────────────────
 
 function isFiniteNumber(value: unknown): value is number {

@@ -145,8 +145,86 @@ export function getLocalDateKey(timestampMs: number, timeZone: ChartTimezone): s
   return `${String(parts.year).padStart(4, '0')}-${String(parts.month).padStart(2, '0')}-${String(parts.day).padStart(2, '0')}`;
 }
 
-export function getTimeZoneLabel(timeZone: ChartTimezone): string {
-  if (timeZone === BROWSER_TIMEZONE) {
+/**
+ * Offset of `timeZone` from UTC at a given instant, in milliseconds.
+ *
+ * Positive east of Greenwich. The zone's wall clock is read as if it were UTC and
+ * compared against the true instant; the difference is the offset.
+ *
+ * Built on `getDateTimeParts` rather than `Date.parse(toLocaleString(...))`
+ * because the latter reinterprets the wall-clock string in the *system* timezone,
+ * silently folding the machine's own offset into the answer. That produced a
+ * three-hour error for New York on a UTC-3 host, and would have been a different
+ * wrong answer on every machine.
+ */
+function timeZoneOffsetMs(instantMs: number, timeZone: ChartTimezone): number {
+  const resolved = resolveTimeZone(timeZone);
+  if (!resolved) return 0;
+  const p = getDateTimeParts(instantMs, timeZone);
+  // `hour12: false` yields hour 24 for midnight in some ICU versions; normalize
+  // it so the arithmetic below cannot overflow into the next day.
+  const hour = p.hour === 24 ? 0 : p.hour;
+  const asIfUtc = Date.UTC(p.year, p.month - 1, p.day, hour, p.minute, p.second);
+  return asIfUtc - instantMs;
+}
+
+/**
+ * Resolves a `YYYY-MM-DD` day to the UTC instant of its start (or end) in a
+ * given timezone.
+ *
+ * The inverse of `getLocalDateKey`. A session's `startDate` is a *calendar day*,
+ * and which instant that day begins at depends on the timezone it is being
+ * judged in. Treating it as UTC midnight — which is what every date boundary in
+ * this codebase used to do — means a user in New York asking for "the 27th" gets
+ * a window starting 20:00 on the 26th local, and silently sees four hours of the
+ * previous day.
+ *
+ * The chart already had a configurable timezone (`chartTimezone`, defaulting to
+ * the browser's), so a session day is resolved in the same zone the chart draws
+ * in, rather than in a second, different one.
+ *
+ * Two correction passes, because a single pass is wrong across a DST boundary:
+ * the offset at the naive UTC guess is not always the offset at the true local
+ * midnight. On a spring-forward day the first pass lands an hour off and the
+ * second corrects it.
+ */
+export function dayBoundaryMs(
+  dateKey: string,
+  timeZone: ChartTimezone,
+  endOfDay = false,
+): number {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateKey);
+  if (!match) {
+    throw new Error(`Invalid date: "${dateKey}". Expected YYYY-MM-DD.`);
+  }
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const naiveUtc = Date.UTC(year, month - 1, day, 0, 0, 0);
+
+  let instant = naiveUtc;
+  for (let pass = 0; pass < 2; pass++) {
+    instant = naiveUtc - timeZoneOffsetMs(instant, timeZone);
+  }
+  return endOfDay ? instant + 86_400_000 : instant;
+}
+
+/**
+ * Formats a Unix timestamp in **seconds** as a readable UTC string.
+ *
+ * Takes seconds, not milliseconds — candle timestamps reach this function from
+ * two different units in this codebase, which is exactly how the
+ * `getBucketStart` bug happened. The unit is in the parameter name for that
+ * reason.
+ */
+export function formatUTCTimestamp(timestampSec: number): string {
+  // Not a truthiness check: 0 is a valid instant (1970-01-01) and must render,
+  // and a NaN timestamp must not render as "NaN".
+  if (!Number.isFinite(timestampSec)) return '';
+  return new Date(timestampSec * 1000).toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
+}
+
+export function getTimeZoneLabel(timeZone: ChartTimezone): string {  if (timeZone === BROWSER_TIMEZONE) {
     return `Browser (${resolveTimeZone(BROWSER_TIMEZONE)})`;
   }
   return timeZone || 'UTC';

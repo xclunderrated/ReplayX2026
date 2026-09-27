@@ -10,7 +10,7 @@ import {
   HelpCircle,
   Gauge,
 } from "lucide-react";
-import { formatUTCTimestamp } from "../utils/timeframe";
+import { formatUTCTimestamp } from "../lib/timezone";
 
 interface ReplayControlsProps {
   isPlaying: boolean;
