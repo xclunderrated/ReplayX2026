@@ -26,7 +26,57 @@ dns.setDefaultResultOrder("ipv4first");
 const app = express();
 const PORT = 3000;
 
-app.use(express.json({ limit: "100mb" }));
+/**
+ * Where the server listens.
+ *
+ * Defaults to loopback. It previously bound `0.0.0.0` unconditionally, which put
+ * every route on the LAN with no authentication at all — including
+ * `/api/auth/google/status`, which returns the connected Google account's email
+ * address and Drive file id, and `/api/drive/restore`, which reads that Drive
+ * file. `/api/auth/google/logout` is a POST with no CSRF defence, so any page a
+ * browser on the network visited could disconnect the account.
+ *
+ * Defaulting to loopback keeps a working local setup working while making
+ * exposure something you choose on purpose. Set `AURA_BIND=lan` to serve the LAN
+ * deliberately; do that only on a network you trust, and prefer tunnelling.
+ */
+const BIND_HOST = process.env.AURA_BIND === "lan" ? "0.0.0.0" : "127.0.0.1";
+
+/**
+ * Body size cap.
+ *
+ * Was 100 MB on every route, which is a trivial memory-exhaustion vector: no
+ * endpoint here needs a request body anywhere near that large — the largest is a
+ * handful of small JSON fields. 2 MB is far above anything legitimate while
+ * still bounding what a single request can allocate.
+ */
+const JSON_BODY_LIMIT = process.env.AURA_MAX_BODY ?? "2mb";
+
+app.use(express.json({ limit: JSON_BODY_LIMIT }));
+
+/**
+ * Turns a body-parse or routing failure into a plain 4xx.
+ *
+ * Without this, Express's default error handler returns the full stack trace as
+ * HTML, which leaks absolute filesystem paths and internal module layout to
+ * whoever sent the malformed request. Observed in practice: a POST with a
+ * malformed body returned a page containing `D:\ReplayX2027\node_modules\...`.
+ * The real error is still logged server-side.
+ */
+app.use((err: any, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (res.headersSent) return next(err);
+  // body-parser marks its own failures with `type` and a status.
+  const isBodyParse = err?.type === "entity.parse.failed" || err?.status === 400 || err?.statusCode === 400;
+  const isTooLarge = err?.type === "entity.too.large";
+  if (isTooLarge) {
+    return res.status(413).json({ error: `Request body too large (limit ${JSON_BODY_LIMIT}).` });
+  }
+  if (isBodyParse) {
+    return res.status(400).json({ error: "Malformed JSON in request body." });
+  }
+  console.error("[Server] Unhandled request error:", err);
+  return res.status(500).json({ error: "Internal server error." });
+});
 
 // Register Google Drive OAuth & Backup API endpoints
 registerDriveRoutes(app);
@@ -47,7 +97,7 @@ if (!fs.existsSync(newsCacheDir)) {
 // because this module binds a port at import time.
 export type { InstrumentMeta } from "./src/lib/instruments";
 import { SUPPORTED_INSTRUMENTS, unavailableReason, type InstrumentMeta } from "./src/lib/instruments";
-import { createBoundedCache, enforceCacheLimits, writeCacheFile } from "./src/lib/cacheStore";
+import { createBoundedCache, createRateLimiter, enforceCacheLimits, writeCacheFile } from "./src/lib/cacheStore";
 
 /**
  * The set of instruments Dukascopy actually serves, taken from dukascopy-node's
@@ -663,10 +713,39 @@ function isIncompleteCachedPayload(payload: any): string | null {
   return `${problem.kind} ${days}-day ${problem.kind === 'tail' ? 'shortfall' : 'gap'}`;
 }
 
+// Bounds how much upstream work a single client can ask for.
+//
+// This is not only about protecting this process. Dukascopy rate-limits, and
+// being rate-limited by it is the *original* bug: the hour feed's per-month file
+// returns HTTP 429 while the month is in progress, `failAfterRetryCount: false`
+// swallowed it, and the session silently lost a month of data. Uncontrolled
+// client volume therefore feeds straight back into silent data loss, so the
+// limiter is a data-correctness control as much as a resource one.
+//
+// Deliberately generous — 30/min sustained with a burst of 10 — so a person
+// clicking between sessions, timeframes and instruments never notices.
+const downloadRateLimiter = createRateLimiter({
+  requestsPerMinute: Number(process.env.AURA_DOWNLOAD_RPM ?? 30),
+  burst: Number(process.env.AURA_DOWNLOAD_BURST ?? 10),
+});
+
 // Download Dukascopy historical data endpoint
 app.post("/api/download", async (req, res) => {
   const startTimeMs = Date.now();
   try {
+    // `req.ip` needs the trust proxy set for x-forwarded-for to be honoured; with
+    // the default it resolves to the socket address, which is the right thing for
+    // a loopback-bound server.
+    const clientKey = req.ip ?? req.socket.remoteAddress ?? "unknown";
+    if (!downloadRateLimiter.take(clientKey)) {
+      const retryAfter = downloadRateLimiter.retryAfterSeconds(clientKey);
+      res.setHeader("Retry-After", String(retryAfter));
+      return res.status(429).json({
+        error: `Too many download requests. Try again in ${retryAfter}s.`,
+        retryAfterSeconds: retryAfter,
+      });
+    }
+
     // Normalize and validate once, up front. Everything downstream â€” the cache
     // key, the on-disk filename, the sub-minute range cap â€” derives from these
     // canonical values rather than from whatever shape the caller sent.
@@ -930,8 +1009,17 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`[AuraEngine Server] Running on http://0.0.0.0:${PORT}`);
+  app.listen(PORT, BIND_HOST, () => {
+    if (BIND_HOST === "0.0.0.0") {
+      console.log(
+        `[AuraEngine Server] Running on http://0.0.0.0:${PORT} - EXPOSED TO THE NETWORK.\n` +
+        `  AURA_BIND=lan is set. Routes have no authentication, and /api/auth/google/status\n` +
+        `  discloses the connected Google account's email and Drive file id. Use this only on a\n` +
+        `  network you trust, or tunnel instead.`
+      );
+    } else {
+      console.log(`[AuraEngine Server] Running on http://127.0.0.1:${PORT} (loopback only)`);
+    }
   });
 }
 

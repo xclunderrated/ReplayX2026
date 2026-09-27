@@ -1,6 +1,7 @@
 import express from "express";
 import path from "path";
 import fs from "fs";
+import crypto from "crypto";
 import { google } from "googleapis";
 
 const TOKENS_FILE = path.join(process.cwd(), ".replayx-drive-tokens.json");
@@ -87,6 +88,72 @@ export async function getAuthenticatedDriveClient(req?: express.Request) {
   };
 }
 
+/**
+ * Single-use nonces for the OAuth `state` parameter.
+ *
+ * Held in memory only, so a restart simply forces a fresh login rather than
+ * leaving a replayable token behind. Bounded and expiry-limited so a caller who
+ * never completes the flow cannot grow it, and consumed on use so a captured
+ * callback URL cannot be replayed.
+ */
+const OAUTH_STATE_TTL_MS = 10 * 60_000;
+const OAUTH_STATE_MAX = 16;
+/** Nonce -> expiry. Insertion order is issue order, so the first key is the oldest. */
+const pendingOAuthStates = new Map<string, number>();
+
+function issueOAuthState(): string {
+  const value = crypto.randomBytes(24).toString("base64url");
+  const now = Date.now();
+  for (const [key, expiresAt] of pendingOAuthStates) {
+    if (now > expiresAt) pendingOAuthStates.delete(key);
+  }
+  pendingOAuthStates.set(value, now + OAUTH_STATE_TTL_MS);
+  // Bound it even if every entry is unexpired.
+  while (pendingOAuthStates.size > OAUTH_STATE_MAX) {
+    const oldest = pendingOAuthStates.keys().next();
+    if (oldest.done) break;
+    pendingOAuthStates.delete(oldest.value);
+  }
+  return value;
+}
+
+/** Returns true only for a nonce this server issued, unexpired, and unused. */
+function consumeOAuthState(candidate: string): boolean {
+  const expiresAt = pendingOAuthStates.get(candidate);
+  if (expiresAt === undefined) return false;
+  // Single use: removed whether or not it had expired, so a captured callback URL
+  // cannot be replayed.
+  pendingOAuthStates.delete(candidate);
+  return Date.now() <= expiresAt;
+}
+
+/**
+ * Rejects state-changing requests that did not originate from this server.
+ *
+ * The Drive routes include an unauthenticated `POST /api/auth/google/logout`
+ * that deletes the stored token file. With no origin check, any page a browser
+ * on the network visited could trigger it with a simple form post — CSRF.
+ * Loopback is always allowed, since the app is served from the same origin.
+ */
+function requireSameOrigin(req: express.Request, res: express.Response): boolean {
+  const origin = req.headers.origin;
+  if (!origin) {
+    // No Origin header: a same-origin form post or a non-browser client. Nothing
+    // to forge, and the loopback bind is the primary control.
+    return true;
+  }
+  let originHost: string;
+  try {
+    originHost = new URL(origin).host;
+  } catch {
+    res.status(403).json({ error: "Malformed Origin header." });
+    return false;
+  }
+  if (originHost === req.headers.host) return true;
+  res.status(403).json({ error: "Cross-origin request rejected." });
+  return false;
+}
+
 export function registerDriveRoutes(app: express.Express) {
   // 1. Initiate OAuth Login
   app.get("/api/auth/google/login", (req, res) => {
@@ -130,9 +197,16 @@ export function registerDriveRoutes(app: express.Express) {
       `);
     }
 
+    // CSRF defence for the OAuth leg. Without `state`, an attacker can start the
+    // flow with their own authorization code and have the callback bind *their*
+    // Google account to this server's token file — or drive a victim's browser
+    // through the flow and capture the code. The nonce is issued here, held in
+    // memory only until the callback, and compared on return.
+    const state = issueOAuthState();
     const authUrl = oauth2Client.generateAuthUrl({
       access_type: "offline",
       prompt: "consent",
+      state,
       scope: [
         "https://www.googleapis.com/auth/drive.file",
         "https://www.googleapis.com/auth/userinfo.email",
@@ -143,7 +217,7 @@ export function registerDriveRoutes(app: express.Express) {
     if (req.query.mode === "redirect") {
       return res.redirect(authUrl);
     }
-    return res.json({ url: authUrl });
+    return res.json({ url: authUrl, state });
   });
 
   // 2. OAuth Callback
@@ -151,6 +225,15 @@ export function registerDriveRoutes(app: express.Express) {
     const code = req.query.code as string;
     if (!code) {
       return res.status(400).send("Authorization code missing.");
+    }
+    // A callback with no state, or a state we did not issue, is not a callback
+    // from a flow this server started.
+    const returnedState = typeof req.query.state === "string" ? req.query.state : "";
+    if (!returnedState || !consumeOAuthState(returnedState)) {
+      console.warn("[GoogleDrive] Rejected OAuth callback with missing or unrecognised state.");
+      return res
+        .status(400)
+        .send("OAuth state mismatch. Start the connection from the app and try again.");
     }
     try {
       const oauth2Client = getOAuth2Client(req);
@@ -254,6 +337,9 @@ export function registerDriveRoutes(app: express.Express) {
 
   // 4. Logout / Disconnect
   app.post("/api/auth/google/logout", (req, res) => {
+    // This deletes the stored token file. Unauthenticated and with no CSRF
+    // defence it was reachable from any page the browser visited.
+    if (!requireSameOrigin(req, res)) return;
     try {
       if (fs.existsSync(TOKENS_FILE)) {
         fs.unlinkSync(TOKENS_FILE);
@@ -266,6 +352,7 @@ export function registerDriveRoutes(app: express.Express) {
 
   // 5. Automatic Sync Endpoint
   app.post("/api/drive/sync", async (req, res) => {
+    if (!requireSameOrigin(req, res)) return;
     const auth = await getAuthenticatedDriveClient(req);
     if (!auth) {
       return res.status(401).json({ error: "Google Drive is not connected." });

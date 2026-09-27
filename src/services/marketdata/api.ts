@@ -87,6 +87,57 @@ export async function downloadMarketData(
   return candles;
 }
 
+/**
+ * POSTs a download request, honouring the server's rate limit.
+ *
+ * The server rate-limits `/api/download` (it must: unbounded request volume
+ * makes Dukascopy rate-limit *us*, and a swallowed 429 on the hour feed's
+ * per-month file is the original silent-data-loss bug). Without a retry here
+ * that limiter would just be a new way for a session to fail, so a 429 is waited
+ * out rather than surfaced.
+ *
+ * Bounded to a few attempts with the server's own `Retry-After`, and abortable,
+ * so a genuine overload still ends in a clear error instead of hanging.
+ */
+async function postDownload(
+  body: Record<string, unknown>,
+  signal?: AbortSignal,
+): Promise<Response> {
+  const MAX_RATE_LIMIT_RETRIES = 3;
+  let res = await fetchWithTimeout(
+    `${API_BASE}/download`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+    REQUEST_TIMEOUT_MS,
+    signal,
+  );
+
+  for (let attempt = 0; attempt < MAX_RATE_LIMIT_RETRIES && res.status === 429; attempt++) {
+    const retryAfterHeader = Number(res.headers.get('Retry-After'));
+    const serverHint = Number.isFinite(retryAfterHeader) && retryAfterHeader > 0 ? retryAfterHeader : 0;
+    // Fall back to a local estimate if the header is absent, and never wait less
+    // than a second — a 0 would spin.
+    const waitMs = Math.min(10_000, Math.max(1000, (serverHint || 2) * 1000));
+    await new Promise((resolve) => setTimeout(resolve, waitMs));
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+    res = await fetchWithTimeout(
+      `${API_BASE}/download`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      },
+      REQUEST_TIMEOUT_MS,
+      signal,
+    );
+  }
+
+  return res;
+}
+
 export async function downloadMarketDataWithMeta(
   instrument: string,
   fromDate: string,
@@ -102,14 +153,8 @@ export async function downloadMarketDataWithMeta(
     return { candles: cached.candles.map(toCandle), meta: cached };
   }
 
-  const res = await fetchWithTimeout(
-    `${API_BASE}/download`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ instrument, fromDate, toDate, priceType, timeframe }),
-    },
-    REQUEST_TIMEOUT_MS,
+  const res = await postDownload(
+    { instrument, fromDate, toDate, priceType, timeframe },
     options?.signal,
   );
 

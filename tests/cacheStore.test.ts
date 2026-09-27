@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { enforceCacheLimits, writeCacheFile, createBoundedCache } from '../src/lib/cacheStore';
+import { enforceCacheLimits, writeCacheFile, createBoundedCache, createRateLimiter } from '../src/lib/cacheStore';
 
 function tmpDir(): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'cachestore-'));
@@ -119,6 +119,81 @@ test('writeCacheFile actually writes valid JSON', async () => {
   // The write is deliberately not awaited by the caller; give it a tick.
   await new Promise((r) => setTimeout(r, 50));
   assert.deepEqual(JSON.parse(fs.readFileSync(target, 'utf-8')), { a: 1, b: [2, 3] });
+});
+
+test('the rate limiter refuses a flood but not normal interactive use', () => {
+  // Unbounded download volume feeds back into the original bug: Dukascopy
+  // rate-limits, a 429 on the hour feed's per-month file is swallowed, and the
+  // session silently loses a month. So this bounds upstream pressure, not just
+  // local resource use.
+  let clock = 1_000_000;
+  const limiter = createRateLimiter({ requestsPerMinute: 30, burst: 10, now: () => clock });
+
+  // A burst of 10 is allowed - a person opening a session, switching timeframe
+  // and scrolling the viewport is nowhere near this.
+  for (let i = 0; i < 10; i++) {
+    assert.equal(limiter.take('client-a'), true, `burst request ${i + 1} must be allowed`);
+  }
+  assert.equal(limiter.take('client-a'), false, 'the 11th in an instant must be refused');
+
+  // One token every 2 seconds at 30/min.
+  clock += 2000;
+  assert.equal(limiter.take('client-a'), true, 'a token must be available after 2s');
+  assert.equal(limiter.take('client-a'), false, 'and only one');
+
+  // Other clients have independent budgets.
+  assert.equal(limiter.take('client-b'), true);
+  assert.equal(limiter.take('client-c'), true);
+
+  // Sustained rate. Capacity equals the burst, so after an idle minute the bucket
+  // refills to full (10), not to a minute's worth of credit (30). The sustained
+  // rate is then measured by consuming steadily.
+  clock += 60_000;
+  let burstAfterIdle = 0;
+  while (limiter.take('client-a')) burstAfterIdle++;
+  assert.equal(burstAfterIdle, 10, 'an idle bucket refills to capacity, no more');
+
+  let allowed = 0;
+  for (let step = 0; step < 30; step++) {
+    clock += 2000; // 30 steps of 2s = 60s, at which 30 tokens accrue
+    if (limiter.take('client-a')) allowed++;
+  }
+  assert.ok(allowed >= 28 && allowed <= 30, `expected ~30/min sustained, got ${allowed}`);
+});
+
+test('an idle rate-limit bucket is capped at the burst size', () => {
+  // Otherwise a client could bank unlimited credit by idling and then fire a
+  // huge burst, which is exactly what the limiter is meant to prevent.
+  let clock = 0;
+  const limiter = createRateLimiter({ requestsPerMinute: 30, burst: 5, now: () => clock });
+  assert.equal(limiter.take('a'), true);
+  clock += 60 * 60_000; // an hour idle
+  let allowed = 0;
+  for (let i = 0; i < 50; i++) if (limiter.take('a')) allowed++;
+  assert.equal(allowed, 5, 'credit must not accumulate beyond the burst');
+});
+
+test('the rate limiter forgets idle clients so its own map stays bounded', () => {
+  // Each simulated client is idle for well past the TTL by the time the loop ends,
+  // so the walk must actually reclaim them - otherwise the limiter's own map is
+  // the unbounded growth it was added to prevent.
+  let clock = 0;
+  const limiter = createRateLimiter({ requestsPerMinute: 30, burst: 10, idleTtlMs: 1_000, now: () => clock });
+  for (let i = 0; i < 500; i++) {
+    limiter.take(`client-${i}`);
+    clock += 5_000; // each client goes idle long before the next request
+  }
+  assert.ok(limiter.size <= 2, `expected idle clients pruned, map holds ${limiter.size}`);
+});
+
+test('retryAfterSeconds is sane', () => {
+  let clock = 0;
+  const limiter = createRateLimiter({ requestsPerMinute: 30, burst: 1, now: () => clock });
+  assert.equal(limiter.take('a'), true);
+  assert.equal(limiter.take('a'), false);
+  const retry = limiter.retryAfterSeconds('a');
+  assert.ok(retry >= 1 && retry <= 3, `expected 1-3s at 30/min, got ${retry}`);
+  assert.equal(limiter.retryAfterSeconds('unknown-client'), 1);
 });
 
 test('the in-memory cache is bounded and evicts least-recently-used', () => {

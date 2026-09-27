@@ -157,6 +157,85 @@ export function enforceCacheLimits(options: CacheSweepOptions): CacheSweepResult
 }
 
 /**
+ * A per-client token bucket, for bounding expensive upstream work.
+ *
+ * Deliberately generous: the point is to stop a runaway loop or an accidental
+ * flood, not to get in the way of a person clicking around. A session load, a
+ * viewport scroll and a timeframe switch are each a single request, so 30
+ * sustained requests a minute with a burst of 10 leaves a wide margin over real
+ * use while still refusing an unbounded loop.
+ *
+ * `Map` insertion order doubles as expiry order, so stale client entries are
+ * dropped as the map is walked — no timer and no cleanup interval.
+ */
+export interface RateLimiterOptions {
+  /** Sustained refill rate, in tokens per minute. */
+  requestsPerMinute: number;
+  /** Maximum burst size. */
+  burst: number;
+  /** Idle clients are forgotten after this long, to bound the map itself. */
+  idleTtlMs?: number;
+  now?: () => number;
+}
+
+export interface RateLimiter {
+  /** Returns false when the request should be rejected. */
+  take(key: string): boolean;
+  /** Seconds until the bucket holds a whole token again; for `Retry-After`. */
+  retryAfterSeconds(key: string): number;
+  readonly size: number;
+}
+
+const MINUTE_MS = 60_000;
+
+export function createRateLimiter(options: RateLimiterOptions): RateLimiter {
+  const { requestsPerMinute, burst } = options;
+  const idleTtlMs = options.idleTtlMs ?? 10 * MINUTE_MS;
+  const now = options.now ?? (() => Date.now());
+  const refillPerMs = requestsPerMinute / MINUTE_MS;
+  const buckets = new Map<string, { tokens: number; updatedAt: number }>();
+
+  const prune = (currentTime: number): void => {
+    for (const [key, bucket] of buckets) {
+      if (currentTime - bucket.updatedAt > idleTtlMs) buckets.delete(key);
+    }
+  };
+
+  return {
+    take(key) {
+      const currentTime = now();
+      prune(currentTime);
+      const existing = buckets.get(key);
+      if (!existing) {
+        buckets.set(key, { tokens: burst - 1, updatedAt: currentTime });
+        return true;
+      }
+      // Refill for elapsed time, capped at the burst size so an idle client cannot
+      // bank unlimited credit.
+      const refilled = Math.min(burst, existing.tokens + (currentTime - existing.updatedAt) * refillPerMs);
+      if (refilled < 1) {
+        existing.tokens = refilled;
+        existing.updatedAt = currentTime;
+        return false;
+      }
+      existing.tokens = refilled - 1;
+      existing.updatedAt = currentTime;
+      return true;
+    },
+    retryAfterSeconds(key) {
+      const bucket = buckets.get(key);
+      if (!bucket) return 1;
+      const deficit = 1 - bucket.tokens;
+      if (deficit <= 0) return 1;
+      return Math.max(1, Math.ceil(deficit / refillPerMs / 1000));
+    },
+    get size() {
+      return buckets.size;
+    },
+  };
+}
+
+/**
  * A least-recently-used cache over a `Map`, bounded by entry count.
  *
  * Wrapped rather than open-coded at each call site so the bound cannot be
