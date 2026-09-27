@@ -9,6 +9,7 @@
  */
 
 import { getMaxRangeDaysForTimeframe } from './timeframe';
+import type { InstrumentCategory } from './instruments';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -118,28 +119,24 @@ export const DUKASCOPY_ALIAS_MAP: Record<string, string> = {
   coppercmdusd: 'coppercmdusd',
 
   // Crypto
+  //
+  // Only symbols Dukascopy actually serves appear here. Removed after diffing
+  // this map against dukascopy-node's `Instrument` enum (1499 values) and
+  // finding the targets did not exist: solusd, xrpusd, dotusd, linkusd,
+  // dogeusd, avaxusd. Dukascopy carries none of those assets in any form;
+  // Solana appears only as `solbbeeur`. Each of those catalogue entries now gets
+  // an explicit 400 explaining the absence, rather than a bare 500 thrown from
+  // inside the library. See `UNAVAILABLE_UPSTREAM` in src/lib/instruments.ts.
   btc: 'btcusd',
   btcusd: 'btcusd',
   eth: 'ethusd',
   ethusd: 'ethusd',
-  sol: 'solusd',
-  solusd: 'solusd',
   ltc: 'ltcusd',
   ltcusd: 'ltcusd',
   bch: 'bchusd',
   bchusd: 'bchusd',
-  xrp: 'xrpusd',
-  xrpusd: 'xrpusd',
   ada: 'adausd',
   adausd: 'adausd',
-  dot: 'dotusd',
-  dotusd: 'dotusd',
-  link: 'linkusd',
-  linkusd: 'linkusd',
-  doge: 'dogeusd',
-  dogeusd: 'dogeusd',
-  avax: 'avaxusd',
-  avaxusd: 'avaxusd',
 };
 
 /**
@@ -293,6 +290,7 @@ export class BadRequestError extends Error {
 export function validateDownloadRequest(
   body: Record<string, unknown>,
   isKnownInstrument: (dukascopyInstrument: string, rawInstrument: string) => boolean,
+  describeUnknownInstrument?: (dukascopyInstrument: string, rawInstrument: string) => string,
 ): { request: DownloadRequest; tfInfo: NormalizedTimeframeInfo } {
   const instrument = String(body?.instrument ?? '').toLowerCase().trim();
   if (!instrument) {
@@ -304,7 +302,16 @@ export function validateDownloadRequest(
 
   const dukascopyInstrument = DUKASCOPY_ALIAS_MAP[instrument] || instrument;
   if (!isKnownInstrument(dukascopyInstrument, instrument)) {
-    throw new BadRequestError(400, `Unsupported instrument "${instrument}".`);
+    // Prefer a specific reason over a generic "unsupported": several catalogue
+    // entries look supported but are not carried upstream at all, and telling the
+    // user which is the difference between a fixable mistake and a dead end.
+    const reason = describeUnknownInstrument?.(dukascopyInstrument, instrument);
+    throw new BadRequestError(
+      400,
+      reason
+        ? `Unsupported instrument "${instrument}": ${reason}.`
+        : `Unsupported instrument "${instrument}".`,
+    );
   }
 
   const fromDate = normalizeDateParam(body?.fromDate);
@@ -378,15 +385,41 @@ export function findLargestInteriorGapSeconds(timesSeconds: number[]): number {
  * How large an interior gap can legitimately get before it means data is
  * missing rather than the market being closed.
  *
- * Measured against real Dukascopy EUR/USD data over holiday-crossing ranges,
- * the largest legitimate interior gap is ~3 days: Dukascopy's daily and hourly
- * feeds emit a Sunday bar for the Sunday open, so the Friday-to-Sunday closure
- * shows up as roughly a 2-day hole rather than the 3+ days a naive
- * Friday-22:00-to-Monday-22:00 reading would suggest. The 7-day intraday bar
- * therefore carries a little over 2x headroom, while still being far below the
- * multi-week hole that a failed month file produces.
+ * This is per *market class*, not global, and the measurements are the reason.
+ * Sampling the `m1` feed across Chinese New Year, China Golden Week, the
+ * Japan/HK new year and Easter 2025 gave these largest legitimate gaps:
+ *
+ *   crypto (24/7)     1.00 d   BTC/USD never closed
+ *   FX majors         1.13 d   EUR/USD; 2.00 d for AUD/CAD over Christmas+NYE
+ *   commodities       2.13 d   gold, WTI
+ *   indices (EU)      2.16 d   DAX
+ *   indices (US)      3.16 d   US 500, Good Friday -> Easter Monday
+ *   stocks            4.17 d   AAPL
+ *   indices (HK)      5.83 d   Hang Seng, Chinese New Year
+ *   indices (AU)      5.00 d   ASX 200
+ *
+ * A single global threshold cannot serve that spread. Catching a *single missing
+ * day* — the residual failure mode left by aggregating h1/h4 from m1 — needs a
+ * threshold under 1.04 days (Mon 23:00 -> Wed 00:00). Tolerating Hang Seng's
+ * real Chinese New Year closure needs 5.83. Those contradict by 5.6x, so the
+ * guard must know the instrument's trading calendar class, and no single number
+ * can catch a one-day hole. That is recorded rather than papered over: a genuine
+ * one-day loss is indistinguishable from a legitimate closure by gap size alone,
+ * and detecting it would need a real trading-calendar reference, not a constant.
+ *
+ * Each threshold below is the measured maximum plus headroom. The false-positive
+ * cost is real — a valid payload is never cached and the user sees a false
+ * "data may be incomplete" warning — so the headroom is deliberate.
+ *
+ * The `d1`/`1W`/`mn1` overrides are not per class because they are already far
+ * looser than any class needs; `d1` in particular sees gaps from `d1` in days,
+ * and after `dropFlatWeekendBars` strips Dukascopy's flat-filled weekend bars the
+ * widest real closure observed is Hang Seng's 5.83 days.
  */
-export function maxLegitimateGapSeconds(canonicalTimeframe: string): number {
+export function maxLegitimateGapSeconds(
+  canonicalTimeframe: string,
+  marketClass?: InstrumentCategory,
+): number {
   switch (canonicalTimeframe) {
     case 'd1':
       return 21 * DAY_SEC;
@@ -395,7 +428,35 @@ export function maxLegitimateGapSeconds(canonicalTimeframe: string): number {
     case 'mn1':
       return 400 * DAY_SEC;
     default:
+      return classGapSeconds(marketClass);
+  }
+}
+
+/** Intraday interior-gap allowance, from measured maxima plus headroom. */
+function classGapSeconds(marketClass?: InstrumentCategory): number {
+  switch (marketClass) {
+    // Measured 1.00 d. 24/7 market, so anything beyond ~3 d is a real hole.
+    case 'crypto':
+      return 3 * DAY_SEC;
+    // Measured 1.13 d (majors) / 2.00 d (AUD/CAD over Christmas + NYE).
+    case 'forex_major':
+    case 'forex_cross':
+      return 4 * DAY_SEC;
+    // Measured 2.13 d (gold, WTI over Good Friday + Easter).
+    case 'commodities':
+      return 4 * DAY_SEC;
+    // Measured 3.16 d (US 500, Good Friday -> Easter Monday).
+    case 'stocks':
       return 7 * DAY_SEC;
+    // Measured 5.83 d (Hang Seng, Chinese New Year) and 5.00 d (ASX 200).
+    case 'indices':
+      return 9 * DAY_SEC;
+    // Not measured — no exotic pair in the catalogue was sampled. Held at the
+    // loosest intraday value so an unmeasured market cannot produce a false
+    // positive; tighten only with a measurement behind it.
+    case 'forex_exotic':
+    default:
+      return 9 * DAY_SEC;
   }
 }
 
@@ -469,8 +530,9 @@ export function findCoverageProblem(
   canonicalTimeframe: string,
   requestedToSeconds?: number,
   nowSeconds: number = Math.floor(Date.now() / 1000),
+  marketClass?: InstrumentCategory,
 ): CoverageProblem | null {
-  const allowedGapSeconds = maxLegitimateGapSeconds(canonicalTimeframe);
+  const allowedGapSeconds = maxLegitimateGapSeconds(canonicalTimeframe, marketClass);
   const largestGapSeconds = findLargestInteriorGapSeconds(timesSeconds);
   if (largestGapSeconds > allowedGapSeconds) {
     const gapDays = (largestGapSeconds / DAY_SEC).toFixed(1);

@@ -1,4 +1,4 @@
-import test from 'node:test';
+﻿import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
@@ -14,6 +14,7 @@ import {
   shiftDate,
   validateDownloadRequest,
 } from '../src/lib/dukascopyRequest';
+import type { InstrumentCategory } from '../src/lib/instruments';
 
 /** Mirrors `dropFlatWeekendBars` in server.ts. */
 function dropFlatWeekendBars(candles: Array<{ time: number; open: number; high: number; low: number; close: number }>) {
@@ -338,7 +339,7 @@ test('a range reaching into the future is not treated as a failed download', () 
   // Dukascopy cannot have data for dates that have not happened, so a session
   // whose end date is in the future legitimately stops at the last published bar.
   // Flagging that would tell the user an upstream download broke when they only
-  // asked for future dates — and would stop the result being cached at all.
+  // asked for future dates â€” and would stop the result being cached at all.
   const nowSeconds = Date.UTC(2026, 8, 27) / 1000;      // "today"
   const lastPublished = Date.UTC(2026, 8, 25, 21) / 1000; // latest available bar
 
@@ -380,14 +381,81 @@ test('monthly sessions ending mid-month are not flagged as short', () => {
   );
 });
 
+test('measured real closures do not false-positive, and real holes are still caught', () => {
+  // The regression this guards: tightening the guard from a flat 7 days to a
+  // uniform 4 days would have flagged Hong Kong's real Chinese New Year closure
+  // (measured 5.83 d), ASX 200 (5.00 d) and AAPL (4.17 d) as failed downloads on
+  // every such holiday â€” never caching valid data and showing users a false
+  // warning. Measured on the m1 feed, which is not flat-filled on weekends.
+  const day = 86_400;
+  const t = (s: string) => Date.parse(s) / 1000;
+  // before the hole, the hole itself, then after it
+  const series = (before: string, after: string) => [
+    t(before), t(before) + day, t(after), t(after) + day,
+  ];
+
+  // Legitimate closures, at their measured sizes -> must NOT be flagged.
+  const legit: Array<[InstrumentCategory, string, string]> = [
+    ['indices', '2025-01-28', '2025-02-03'], // Hang Seng CNY, 5.83 d
+    ['indices', '2025-09-26', '2025-10-01'], // ASX 200, 5.00 d
+    ['stocks', '2025-10-01', '2025-10-05'], // AAPL, 4.17 d
+    ['stocks', '2025-04-17', '2025-04-21'], // US 500, 3.16 d
+    ['forex_major', '2025-04-17', '2025-04-19'], // Good Friday, 1.13 d
+  ];
+  for (const [cls, before, after] of legit) {
+    const problem = findCoverageProblem(series(before, after), 'm15', undefined, t('2026-11-01'), cls);
+    assert.equal(
+      problem, null,
+      `${cls}: a real ${((t(after) - t(before)) / day).toFixed(2)}d closure must not be flagged`,
+    );
+  }
+
+  // The original bug: a whole calendar month missing from the middle of a range.
+  // Must be caught for every class, not just the loose ones.
+  for (const cls of ['crypto', 'forex_major', 'commodities', 'stocks', 'indices', 'forex_exotic'] as InstrumentCategory[]) {
+    const problem = findCoverageProblem(
+      series('2026-08-15', '2026-09-25'), 'm15', undefined, t('2026-11-01'), cls,
+    );
+    assert.ok(problem, `${cls}: a 41-day hole must be caught`);
+    assert.equal(problem.kind, 'interior');
+  }
+
+  // A 20-day hole (two failed weeks) must be caught even for the loosest class.
+  assert.ok(
+    findCoverageProblem(series('2026-08-15', '2026-09-04'), 'm15', undefined, t('2026-11-01'), 'indices'),
+    'a 20-day hole must be caught for indices',
+  );
+
+  // A single missing day is NOT detectable by gap size, and that is recorded
+  // rather than pretended away: 1.04 d sits below every measured legitimate
+  // closure's threshold, so no constant can separate them.
+  const oneMissingDay = findCoverageProblem(
+    series('2026-08-24', '2026-08-26'), 'm15', undefined, t('2026-11-01'), 'crypto',
+  );
+  assert.equal(oneMissingDay, null, 'a 1-day hole is indistinguishable from a closure by size alone');
+});
+
 test('findCoverageProblem gives coarser timeframes more headroom', () => {
   // Thresholds are expressed in seconds and compared against second-based gaps;
   // getting this wrong (e.g. comparing seconds to milliseconds) makes every
   // threshold 1000x too permissive and silently disables the guard.
-  assert.equal(maxLegitimateGapSeconds('m15'), 7 * DAY_SEC);
-  assert.equal(maxLegitimateGapSeconds('h4'), 7 * DAY_SEC);
+  //
+  // Intraday tolerances are now per market class, derived from measured real
+  // gaps. With no class supplied the loosest measured class is used, so an
+  // unknown market is never falsely accused of having missing data. Every real
+  // payload records its instrument category, so this path is only for entries
+  // written before that was plumbed through.
+  assert.equal(maxLegitimateGapSeconds('m15'), 9 * DAY_SEC);
+  assert.equal(maxLegitimateGapSeconds('h4'), 9 * DAY_SEC);
+  assert.equal(maxLegitimateGapSeconds('m15', 'crypto'), 3 * DAY_SEC);
+  assert.equal(maxLegitimateGapSeconds('m15', 'forex_major'), 4 * DAY_SEC);
+  assert.equal(maxLegitimateGapSeconds('m15', 'indices'), 9 * DAY_SEC);
+  // Coarser timeframes stay loose regardless of class - their gap is already
+  // measured in days.
   assert.equal(maxLegitimateGapSeconds('d1'), 21 * DAY_SEC);
+  assert.equal(maxLegitimateGapSeconds('d1', 'crypto'), 21 * DAY_SEC);
   assert.equal(maxLegitimateGapSeconds('1W'), 90 * DAY_SEC);
+  assert.equal(maxLegitimateGapSeconds('1W', 'crypto'), 90 * DAY_SEC);
   assert.equal(maxLegitimateGapSeconds('mn1'), 400 * DAY_SEC);
 
   const mon = Date.UTC(2026, 0, 5) / 1000;
@@ -405,7 +473,7 @@ test('a healthy dense series never trips the guard', () => {
 
 test('the weekend filter drops placeholders but keeps real flat sessions', () => {
   // Dukascopy emits flat O=H=L=C bars for weekend closures. `ignoreFlats` was
-  // removing those, but it also removed flat *weekday* sessions — for equities
+  // removing those, but it also removed flat *weekday* sessions â€” for equities
   // that silently corrupted 9 of 91 weekly candles, because the discarded bar
   // was extending the week's high or low.
   const at = (iso: string) => {
@@ -458,3 +526,4 @@ test('tail tolerance is looser for coarse timeframes than for intraday', () => {
   // A monthly series is stamped on the 1st, so ending on the 29th is normal.
   assert.equal(maxLegitimateTailShortfallSeconds('mn1'), 45 * DAY_SEC);
 });
+

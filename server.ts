@@ -1,4 +1,4 @@
-import express from "express";
+﻿import express from "express";
 import path from "path";
 import fs from "fs";
 import dns from "dns";
@@ -42,110 +42,26 @@ if (!fs.existsSync(newsCacheDir)) {
   fs.mkdirSync(newsCacheDir, { recursive: true });
 }
 
-// Instrument metadata (matching NewDukascopySystem)
-export interface InstrumentMeta {
-  id: string;
-  symbol: string;
-  name: string;
-  category: "forex_major" | "forex_cross" | "forex_exotic" | "commodities" | "crypto" | "indices" | "stocks";
-  pipSize: number;
-  decimalPlaces: number;
-}
+// Instrument metadata lives in src/lib/instruments.ts so it can be imported and
+// tested â€” it was inline here, which made it unreachable from `node --test`
+// because this module binds a port at import time.
+export type { InstrumentMeta } from "./src/lib/instruments";
+import { SUPPORTED_INSTRUMENTS, unavailableReason, type InstrumentMeta } from "./src/lib/instruments";
 
-const SUPPORTED_INSTRUMENTS: InstrumentMeta[] = [
-  // Forex Majors
-  { id: "eurusd", symbol: "EUR/USD", name: "Euro / US Dollar", category: "forex_major", pipSize: 0.0001, decimalPlaces: 5 },
-  { id: "gbpusd", symbol: "GBP/USD", name: "British Pound / US Dollar", category: "forex_major", pipSize: 0.0001, decimalPlaces: 5 },
-  { id: "usdjpy", symbol: "USD/JPY", name: "US Dollar / Japanese Yen", category: "forex_major", pipSize: 0.01, decimalPlaces: 3 },
-  { id: "audusd", symbol: "AUD/USD", name: "Australian Dollar / US Dollar", category: "forex_major", pipSize: 0.0001, decimalPlaces: 5 },
-  { id: "usdcad", symbol: "USD/CAD", name: "US Dollar / Canadian Dollar", category: "forex_major", pipSize: 0.0001, decimalPlaces: 5 },
-  { id: "usdchf", symbol: "USD/CHF", name: "US Dollar / Swiss Franc", category: "forex_major", pipSize: 0.0001, decimalPlaces: 5 },
-  { id: "nzdusd", symbol: "NZD/USD", name: "New Zealand Dollar / US Dollar", category: "forex_major", pipSize: 0.0001, decimalPlaces: 5 },
-  
-  // Forex Crosses & Minors
-  { id: "eurgbp", symbol: "EUR/GBP", name: "Euro / British Pound", category: "forex_cross", pipSize: 0.0001, decimalPlaces: 5 },
-  { id: "eurjpy", symbol: "EUR/JPY", name: "Euro / Japanese Yen", category: "forex_cross", pipSize: 0.01, decimalPlaces: 3 },
-  { id: "gbpjpy", symbol: "GBP/JPY", name: "British Pound / Japanese Yen", category: "forex_cross", pipSize: 0.01, decimalPlaces: 3 },
-  { id: "audjpy", symbol: "AUD/JPY", name: "Australian Dollar / Japanese Yen", category: "forex_cross", pipSize: 0.01, decimalPlaces: 3 },
-  { id: "euraud", symbol: "EUR/AUD", name: "Euro / Australian Dollar", category: "forex_cross", pipSize: 0.0001, decimalPlaces: 5 },
-  { id: "gbpcad", symbol: "GBP/CAD", name: "British Pound / Canadian Dollar", category: "forex_cross", pipSize: 0.0001, decimalPlaces: 5 },
-  { id: "cadjpy", symbol: "CAD/JPY", name: "Canadian Dollar / Japanese Yen", category: "forex_cross", pipSize: 0.01, decimalPlaces: 3 },
-  { id: "eurchf", symbol: "EUR/CHF", name: "Euro / Swiss Franc", category: "forex_cross", pipSize: 0.0001, decimalPlaces: 5 },
-  { id: "eurcad", symbol: "EUR/CAD", name: "Euro / Canadian Dollar", category: "forex_cross", pipSize: 0.0001, decimalPlaces: 5 },
-  { id: "eurnzd", symbol: "EUR/NZD", name: "Euro / New Zealand Dollar", category: "forex_cross", pipSize: 0.0001, decimalPlaces: 5 },
-  { id: "gbpchf", symbol: "GBP/CHF", name: "British Pound / Swiss Franc", category: "forex_cross", pipSize: 0.0001, decimalPlaces: 5 },
-  { id: "gbpaud", symbol: "GBP/AUD", name: "British Pound / Australian Dollar", category: "forex_cross", pipSize: 0.0001, decimalPlaces: 5 },
-  { id: "gbpnzd", symbol: "GBP/NZD", name: "British Pound / New Zealand Dollar", category: "forex_cross", pipSize: 0.0001, decimalPlaces: 5 },
-  { id: "audcad", symbol: "AUD/CAD", name: "Australian Dollar / Canadian Dollar", category: "forex_cross", pipSize: 0.0001, decimalPlaces: 5 },
-  { id: "audchf", symbol: "AUD/CHF", name: "Australian Dollar / Swiss Franc", category: "forex_cross", pipSize: 0.0001, decimalPlaces: 5 },
-  { id: "audnzd", symbol: "AUD/NZD", name: "Australian Dollar / New Zealand Dollar", category: "forex_cross", pipSize: 0.0001, decimalPlaces: 5 },
-  { id: "cadchf", symbol: "CAD/CHF", name: "Canadian Dollar / Swiss Franc", category: "forex_cross", pipSize: 0.0001, decimalPlaces: 5 },
-  { id: "nzdjpy", symbol: "NZD/JPY", name: "New Zealand Dollar / Japanese Yen", category: "forex_cross", pipSize: 0.01, decimalPlaces: 3 },
-  { id: "nzdcad", symbol: "NZD/CAD", name: "New Zealand Dollar / Canadian Dollar", category: "forex_cross", pipSize: 0.0001, decimalPlaces: 5 },
-  { id: "nzdchf", symbol: "NZD/CHF", name: "New Zealand Dollar / Swiss Franc", category: "forex_cross", pipSize: 0.0001, decimalPlaces: 5 },
-  { id: "chfjpy", symbol: "CHF/JPY", name: "Swiss Franc / Japanese Yen", category: "forex_cross", pipSize: 0.01, decimalPlaces: 3 },
-  
-  // Forex Exotics
-  { id: "usdsgd", symbol: "USD/SGD", name: "US Dollar / Singapore Dollar", category: "forex_exotic", pipSize: 0.0001, decimalPlaces: 5 },
-  { id: "usdhkd", symbol: "USD/HKD", name: "US Dollar / Hong Kong Dollar", category: "forex_exotic", pipSize: 0.0001, decimalPlaces: 5 },
-  { id: "usdsek", symbol: "USD/SEK", name: "US Dollar / Swedish Krona", category: "forex_exotic", pipSize: 0.0001, decimalPlaces: 5 },
-  { id: "usdnok", symbol: "USD/NOK", name: "US Dollar / Norwegian Krone", category: "forex_exotic", pipSize: 0.0001, decimalPlaces: 5 },
-  { id: "usdzar", symbol: "USD/ZAR", name: "US Dollar / South African Rand", category: "forex_exotic", pipSize: 0.0001, decimalPlaces: 5 },
-  { id: "usdtry", symbol: "USD/TRY", name: "US Dollar / Turkish Lira", category: "forex_exotic", pipSize: 0.0001, decimalPlaces: 5 },
-  { id: "usdmxn", symbol: "USD/MXN", name: "US Dollar / Mexican Peso", category: "forex_exotic", pipSize: 0.0001, decimalPlaces: 5 },
-  { id: "usdpln", symbol: "USD/PLN", name: "US Dollar / Polish Zloty", category: "forex_exotic", pipSize: 0.0001, decimalPlaces: 5 },
-  { id: "eursgd", symbol: "EUR/SGD", name: "Euro / Singapore Dollar", category: "forex_exotic", pipSize: 0.0001, decimalPlaces: 5 },
-  { id: "eursek", symbol: "EUR/SEK", name: "Euro / Swedish Krona", category: "forex_exotic", pipSize: 0.0001, decimalPlaces: 5 },
-  { id: "eurnok", symbol: "EUR/NOK", name: "Euro / Norwegian Krone", category: "forex_exotic", pipSize: 0.0001, decimalPlaces: 5 },
-  { id: "eurtry", symbol: "EUR/TRY", name: "Euro / Turkish Lira", category: "forex_exotic", pipSize: 0.0001, decimalPlaces: 5 },
-  
-  // Commodities & Metals
-  { id: "xauusd", symbol: "XAU/USD", name: "Gold / US Dollar", category: "commodities", pipSize: 0.1, decimalPlaces: 2 },
-  { id: "xagusd", symbol: "XAG/USD", name: "Silver / US Dollar", category: "commodities", pipSize: 0.01, decimalPlaces: 3 },
-  { id: "xaueur", symbol: "XAU/EUR", name: "Gold / Euro", category: "commodities", pipSize: 0.1, decimalPlaces: 2 },
-  { id: "xageur", symbol: "XAG/EUR", name: "Silver / Euro", category: "commodities", pipSize: 0.01, decimalPlaces: 3 },
-  { id: "xptcmdusd", symbol: "XPT/USD", name: "Platinum / US Dollar", category: "commodities", pipSize: 0.1, decimalPlaces: 2 },
-  { id: "xpdcmdusd", symbol: "XPD/USD", name: "Palladium / US Dollar", category: "commodities", pipSize: 0.1, decimalPlaces: 2 },
-  { id: "brentcmdusd", symbol: "BRENT", name: "Brent Crude Oil", category: "commodities", pipSize: 0.01, decimalPlaces: 2 },
-  { id: "lightcmdusd", symbol: "WTI", name: "WTI Crude Oil", category: "commodities", pipSize: 0.01, decimalPlaces: 2 },
-  { id: "gascmdusd", symbol: "NGAS", name: "Natural Gas", category: "commodities", pipSize: 0.001, decimalPlaces: 3 },
-  { id: "coppercmdusd", symbol: "COPPER", name: "High Grade Copper", category: "commodities", pipSize: 0.001, decimalPlaces: 3 },
-  
-  // Crypto
-  { id: "btcusd", symbol: "BTC/USD", name: "Bitcoin / US Dollar", category: "crypto", pipSize: 1.0, decimalPlaces: 2 },
-  { id: "ethusd", symbol: "ETH/USD", name: "Ethereum / US Dollar", category: "crypto", pipSize: 0.1, decimalPlaces: 2 },
-  { id: "solusd", symbol: "SOL/USD", name: "Solana / US Dollar", category: "crypto", pipSize: 0.01, decimalPlaces: 2 },
-  { id: "xrpusd", symbol: "XRP/USD", name: "Ripple / US Dollar", category: "crypto", pipSize: 0.0001, decimalPlaces: 4 },
-  { id: "ltcusd", symbol: "LTC/USD", name: "Litecoin / US Dollar", category: "crypto", pipSize: 0.01, decimalPlaces: 2 },
-  { id: "bchusd", symbol: "BCH/USD", name: "Bitcoin Cash / US Dollar", category: "crypto", pipSize: 0.01, decimalPlaces: 2 },
-  { id: "adausd", symbol: "ADA/USD", name: "Cardano / US Dollar", category: "crypto", pipSize: 0.0001, decimalPlaces: 4 },
-  { id: "dotusd", symbol: "DOT/USD", name: "Polkadot / US Dollar", category: "crypto", pipSize: 0.001, decimalPlaces: 3 },
-  { id: "linkusd", symbol: "LINK/USD", name: "Chainlink / US Dollar", category: "crypto", pipSize: 0.001, decimalPlaces: 3 },
-  { id: "dogeusd", symbol: "DOGE/USD", name: "Dogecoin / US Dollar", category: "crypto", pipSize: 0.00001, decimalPlaces: 5 },
-  { id: "avaxusd", symbol: "AVAX/USD", name: "Avalanche / US Dollar", category: "crypto", pipSize: 0.01, decimalPlaces: 2 },
-  
-  // Indices
-  { id: "usa500idxusd", symbol: "US500", name: "S&P 500 Index", category: "indices", pipSize: 0.1, decimalPlaces: 2 },
-  { id: "usa30idxusd", symbol: "US30", name: "Dow Jones 30 Index", category: "indices", pipSize: 1.0, decimalPlaces: 1 },
-  { id: "usatechidxusd", symbol: "NAS100", name: "Nasdaq 100 Index", category: "indices", pipSize: 0.1, decimalPlaces: 2 },
-  { id: "deuidxeur", symbol: "GER40", name: "DAX 40 Index", category: "indices", pipSize: 1.0, decimalPlaces: 1 },
-  { id: "gbridxgbp", symbol: "UK100", name: "FTSE 100 Index", category: "indices", pipSize: 1.0, decimalPlaces: 1 },
-  { id: "fraidxeur", symbol: "FRA40", name: "CAC 40 Index", category: "indices", pipSize: 1.0, decimalPlaces: 1 },
-  { id: "jpnidxjpy", symbol: "JPN225", name: "Nikkei 225 Index", category: "indices", pipSize: 1.0, decimalPlaces: 1 },
-  { id: "ausidxaud", symbol: "AUS200", name: "ASX 200 Index", category: "indices", pipSize: 1.0, decimalPlaces: 1 },
-  { id: "eusidxeur", symbol: "EU50", name: "Euro Stoxx 50 Index", category: "indices", pipSize: 1.0, decimalPlaces: 1 },
-  { id: "hkgidxhkd", symbol: "HK50", name: "Hang Seng Index", category: "indices", pipSize: 1.0, decimalPlaces: 1 },
-  { id: "chiidxusd", symbol: "CHI50", name: "China A50 Index", category: "indices", pipSize: 1.0, decimalPlaces: 1 },
-  
-  // Global Equities / Stocks
-  { id: "aaplususd", symbol: "AAPL", name: "Apple Inc.", category: "stocks", pipSize: 0.01, decimalPlaces: 2 },
-  { id: "msftususd", symbol: "MSFT", name: "Microsoft Corporation", category: "stocks", pipSize: 0.01, decimalPlaces: 2 },
-  { id: "nvdaususd", symbol: "NVDA", name: "NVIDIA Corporation", category: "stocks", pipSize: 0.01, decimalPlaces: 2 },
-  { id: "amznususd", symbol: "AMZN", name: "Amazon.com Inc.", category: "stocks", pipSize: 0.01, decimalPlaces: 2 },
-  { id: "googususd", symbol: "GOOGL", name: "Alphabet Inc.", category: "stocks", pipSize: 0.01, decimalPlaces: 2 },
-  { id: "tslaususd", symbol: "TSLA", name: "Tesla Inc.", category: "stocks", pipSize: 0.01, decimalPlaces: 2 },
-  { id: "metaususd", symbol: "META", name: "Meta Platforms Inc.", category: "stocks", pipSize: 0.01, decimalPlaces: 2 },
-];
+/**
+ * The set of instruments Dukascopy actually serves, taken from dukascopy-node's
+ * own `Instrument` enum (1499 runtime values).
+ *
+ * This â€” not `SUPPORTED_INSTRUMENTS` â€” is the authority on whether a symbol can
+ * be downloaded. The catalogue is hand-maintained and had drifted: seven of its
+ * entries are not served upstream at all, and because the catalogue was the only
+ * gate they passed validation and then threw inside dukascopy-node, surfacing as
+ * a 500 with an `undefined` message. See `UNAVAILABLE_UPSTREAM`.
+ */
+const VALID_DUKASCOPY_INSTRUMENTS = new Set<string>(
+  Object.values(Instrument as Record<string, string>).map((v) => String(v).toLowerCase())
+);
+
 
 // Health endpoint
 app.get("/api/health", (_req, res) => {
@@ -323,8 +239,8 @@ const memoryCache = new Map<string, any>();
  * written by an older pipeline are not served after the fact.
  *
  * The processed files in `.dukascopy-cache` are derived data whose filenames are
- * part of the cache key. Without this, any change to the transformation — an
- * aggregation base, a Monday week anchor, the `ignoreFlats` policy — silently
+ * part of the cache key. Without this, any change to the transformation â€” an
+ * aggregation base, a Monday week anchor, the `ignoreFlats` policy â€” silently
  * keeps serving entries computed the old way, which is exactly how a truncated
  * or lossy result outlives the fix for it.
  */
@@ -381,7 +297,7 @@ interface DownloadPayload {
   requestedTo?: string;
   /**
    * True when `findCoverageProblem` found an interior gap too large to be a
-   * market closure — i.e. an upstream download failed part-way through. Partial
+   * market closure â€” i.e. an upstream download failed part-way through. Partial
    * payloads are still returned but are never written to either cache, so the
    * next request re-downloads instead of replaying the same truncated data.
    */
@@ -475,14 +391,14 @@ function toSecondsCandle(c: { timestamp: number; open: number; high: number; low
  * Downloads one native Dukascopy timeframe.
  *
  * `failAfterRetryCount: false` means a file that 404s or is rate-limited is
- * skipped rather than aborting the whole pull — required, because weekends and
+ * skipped rather than aborting the whole pull â€” required, because weekends and
  * holidays legitimately have no file. The trade-off is that a *genuine* failure
  * looks identical to a market closure, which is why every caller runs the result
  * through `findCoverageProblem` before trusting or caching it.
  *
  * `ignoreFlats` is enabled only for the sub-second feeds. On the daily feed it
  * discards real flat weekday sessions for equities, which silently corrupts the
- * weekly candles built from them — see `dropFlatWeekendBars`.
+ * weekly candles built from them â€” see `dropFlatWeekendBars`.
  */
 function downloadNative(
   nativeTf: DukascopyNativeTimeframe,
@@ -544,8 +460,8 @@ function clipBucketsToRange<T extends { timestamp: number }>(
  *   usa500idxusd  92 dropped (90 Sat, 2 Fri)                    -> weekly OHLC unchanged
  *   aaplususd    199 dropped (90 Sat, 90 Sun, 19 weekdays)     -> 9 weekly candles WRONG
  *
- * For equities, `ignoreFlats` also discards flat *weekday* bars — a quiet or
- * halted session is real information — and in 3 cases the discarded bar sat
+ * For equities, `ignoreFlats` also discards flat *weekday* bars â€” a quiet or
+ * halted session is real information â€” and in 3 cases the discarded bar sat
  * outside its week's range, so it was extending the weekly high or low. That
  * made the 1W candles wrong. Restricting the filter to flat bars that also fall
  * on a weekend keeps every real session and removes only the placeholders.
@@ -559,8 +475,8 @@ function dropFlatWeekendBars(candles: SanitizedCandle[]): SanitizedCandle[] {
 }
 
 // Load (or fetch once and cache) the real s1 base data for a range. The s1
-// base is the shared source for s5/s15/s30/tick — like m1 is the shared base
-// for 5m/15m/1h — so switching sub-minute timeframes reuses one tick download
+// base is the shared source for s5/s15/s30/tick â€” like m1 is the shared base
+// for 5m/15m/1h â€” so switching sub-minute timeframes reuses one tick download
 // instead of re-downloading it per timeframe. Cached on disk only (a 30-day s1
 // file is ~30-40MB, too big for the in-memory Map).
 function loadS1Base(
@@ -593,7 +509,7 @@ function loadS1Base(
     console.log(`[Dukascopy API] Fetching s1 base: ${dukascopyInstrument} from ${fromDate} to ${toDate}`);
 
     // Real 1-second tick data. Raw tick binaries are gigabytes of data, so
-    // useCache stays false — only our aggregated JSON s1 base is persisted.
+    // useCache stays false â€” only our aggregated JSON s1 base is persisted.
     // Gentle batching (20 files per batch + 100ms pause) keeps multi-day
     // downloads (~672 hourly files for 28 days) polite to Dukascopy.
     // Per-file retries (retryCount: 2) absorb rate-limit (429) blips; with
@@ -693,7 +609,7 @@ function enforceS1CacheLimit(maxBytes = S1_MAX_TOTAL_BYTES): void {
  * part of its range.
  *
  * Freshly-built payloads are already checked before being cached, but files
- * written by earlier versions of this endpoint predate that check — so a
+ * written by earlier versions of this endpoint predate that check â€” so a
  * truncated H1/H4 series produced before the fix would otherwise be served
  * forever, leaving the original bug in place for anyone who upgrades without
  * clearing `.dukascopy-cache`.
@@ -713,6 +629,11 @@ function isIncompleteCachedPayload(payload: any): string | null {
     payload.candles.map((c: SanitizedCandle) => c.time),
     String(payload.timeframe ?? 'm1'),
     requestedTo,
+    undefined,
+    // Payloads record their instrument metadata, so the per-class gap tolerance
+    // applies to cached entries too. Absent on payloads written before this
+    // existed, which fall back to the loosest allowance.
+    payload.instrument?.category,
   );
   if (!problem) return null;
   const days = (problem.largestGapSeconds / 86_400).toFixed(1);
@@ -723,13 +644,17 @@ function isIncompleteCachedPayload(payload: any): string | null {
 app.post("/api/download", async (req, res) => {
   const startTimeMs = Date.now();
   try {
-    // Normalize and validate once, up front. Everything downstream — the cache
-    // key, the on-disk filename, the sub-minute range cap — derives from these
+    // Normalize and validate once, up front. Everything downstream â€” the cache
+    // key, the on-disk filename, the sub-minute range cap â€” derives from these
     // canonical values rather than from whatever shape the caller sent.
     const { request, tfInfo } = validateDownloadRequest(
       (req.body ?? {}) as Record<string, unknown>,
       (dukascopyInstrument, rawInstrument) =>
-        SUPPORTED_INSTRUMENTS.some((i) => i.id === dukascopyInstrument || i.id === rawInstrument),
+        VALID_DUKASCOPY_INSTRUMENTS.has(dukascopyInstrument) ||
+        VALID_DUKASCOPY_INSTRUMENTS.has(rawInstrument),
+      (dukascopyInstrument) =>
+        unavailableReason(dukascopyInstrument, (s) => VALID_DUKASCOPY_INSTRUMENTS.has(s)) ??
+        "not in Dukascopy's instrument list",
     );
 
     const { fromDate, toDate, priceType, timeframe: requestedTimeframe } = request;
@@ -754,7 +679,7 @@ app.post("/api/download", async (req, res) => {
     if (memoryCache.has(cacheKey)) {
       const cachedData = memoryCache.get(cacheKey);
       // Validate on read as well as on write. Entries written before this
-      // guard existed — including ones seeded from an on-disk file below — can
+      // guard existed â€” including ones seeded from an on-disk file below â€” can
       // be a truncated series, and serving those forever would leave the bug in
       // place for anyone who upgrades without clearing their cache.
       const stale = isIncompleteCachedPayload(cachedData);
@@ -824,7 +749,7 @@ app.post("/api/download", async (req, res) => {
         }
       } else if (tfInfo.aggregationTarget) {
         // Locally aggregated timeframes: h1/h4 from m1, 1W from d1.
-        // h1/h4 deliberately use m1 — see resolveTimeframe() for why the native
+        // h1/h4 deliberately use m1 â€” see resolveTimeframe() for why the native
         // hour feed cannot be trusted for the current month.
         const target = tfInfo.aggregationTarget;
         const sourceTf = tfInfo.nativeDukascopyTimeframe;
@@ -886,17 +811,19 @@ app.post("/api/download", async (req, res) => {
       // Completeness check. `candles.length > 0` is the only thing this endpoint
       // used to verify, which is why a download that silently lost a whole
       // calendar month (a 429 on one file, swallowed by failAfterRetryCount)
-      // looked identical to a successful one — and was then cached, making the
+      // looked identical to a successful one â€” and was then cached, making the
       // truncated series permanent.
       //
       // The tail check is the one that matters here: when the missing file is
       // the most recent month, the data that never arrived is at the *end* of
       // the range, so the series just stops early. An interior-gap check cannot
-      // see that, because there is no gap — the candles simply end.
+      // see that, because there is no gap â€” the candles simply end.
       const coverageProblem = findCoverageProblem(
         responseCandles.map((c) => c.time),
         actualTimeframe,
         new Date(`${toDate}T00:00:00Z`).getTime() / 1000,
+        undefined,
+        instMeta.category,
       );
       const isPartial = coverageProblem !== null;
 
@@ -923,7 +850,7 @@ app.post("/api/download", async (req, res) => {
       // means the next attempt (or the client's Retry) re-downloads instead.
       if (isPartial) {
         console.warn(
-          `[Dukascopy API] Not caching ${cacheKey} — ${coverageProblem!.kind} ` +
+          `[Dukascopy API] Not caching ${cacheKey} â€” ${coverageProblem!.kind} ` +
           `${(coverageProblem!.largestGapSeconds / 86400).toFixed(1)}-day ` +
           `${coverageProblem!.kind === 'tail' ? 'shortfall from toDate' : 'interior gap'}.`
         );
