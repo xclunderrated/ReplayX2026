@@ -63,7 +63,7 @@ export interface DownloadResponse {
    */
   warning?: string;
   /** Which kind of incompleteness was detected. */
-  partialKind?: 'interior' | 'tail';
+  partialKind?: 'interior' | 'tail' | 'head';
   /** Size of the gap or shortfall, in days. */
   partialDays?: number;
 }

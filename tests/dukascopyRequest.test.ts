@@ -435,6 +435,89 @@ test('measured real closures do not false-positive, and real holes are still cau
   assert.equal(oneMissingDay, null, 'a 1-day hole is indistinguishable from a closure by size alone');
 });
 
+test('the head check catches data missing from the start of a range', () => {
+  // Neither existing check could see this. An interior check needs two candles
+  // with a hole between them, and a truncated start has nothing before it. This
+  // was observed for real: `aaplususd` returned 7 of 19 requested days, all 12
+  // missing days at the front, and nothing flagged it.
+  const t = (s: string) => Date.parse(s) / 1000;
+  const now = t('2026-11-01');
+  const from = t('2024-12-20');
+  const to = t('2025-01-08');
+
+  // Only 7 days present, starting 2025-01-01 - a 12-day head shortfall.
+  const times = Array.from({ length: 7 }, (_, i) => t('2025-01-01') + i * 86_400);
+  const problem = findCoverageProblem(times, 'd1', to, now, 'stocks', from);
+  assert.ok(problem, 'a 12-day head shortfall must be reported');
+  assert.equal(problem.kind, 'head');
+  assert.equal(problem.shortfallDays, 12);
+  assert.match(problem.message, /starts 12\.0 days after/);
+});
+
+test('the head check tolerates a range that legitimately starts late', () => {
+  const t = (s: string) => Date.parse(s) / 1000;
+  const now = t('2026-11-01');
+
+  // A stock range starting on a Saturday opens on the following Monday: 2 days.
+  // Inside the 7-day stocks bound, so not flagged.
+  const from = t('2026-08-22'); // Saturday
+  const to = t('2026-08-26');
+  const times = [t('2026-08-24'), t('2026-08-25'), t('2026-08-26')];
+  assert.equal(
+    findCoverageProblem(times, 'd1', to, now, 'stocks', from),
+    null,
+    'a weekend start is a closure, not a failed download',
+  );
+
+  // Chinese New Year for an index: 5.83 days measured, 9-day bound.
+  const cnyFrom = t('2025-01-28');
+  const cnyTimes = [t('2025-02-03'), t('2025-02-04'), t('2025-02-05')];
+  assert.equal(
+    findCoverageProblem(cnyTimes, 'm15', undefined, now, 'indices', cnyFrom),
+    null,
+    'the Hang Seng CNY closure must not be flagged at the head',
+  );
+
+  // A crypto range starting on a Sunday: 1 day, well inside the 3-day bound.
+  assert.equal(
+    findCoverageProblem([t('2026-08-24'), t('2026-08-25')], 'm15', undefined, now, 'crypto', t('2026-08-23')),
+    null,
+  );
+});
+
+test('the head check is skipped for ranges that have not happened yet', () => {
+  const t = (s: string) => Date.parse(s) / 1000;
+  const now = t('2026-11-01');
+  // Asking for a future range returns whatever exists; nothing is missing yet.
+  const from = t('2027-01-01');
+  const times = [t('2027-01-01'), t('2027-01-02')];
+  assert.equal(
+    findCoverageProblem(times, 'd1', t('2027-01-05'), now, 'stocks', from),
+    null,
+    'a future range cannot have a head shortfall',
+  );
+});
+
+test('the head check does not fire when no range start was supplied', () => {
+  // Cached payloads written before `requestedFrom` was recorded have no start to
+  // compare against, and must not be discarded for it.
+  const t = (s: string) => Date.parse(s) / 1000;
+  const times = [t('2025-01-01'), t('2025-01-02')];
+  assert.equal(findCoverageProblem(times, 'd1', t('2025-01-08'), t('2026-11-01'), 'stocks'), null);
+});
+
+test('the head check is tighter for 24/7 markets than for indices', () => {
+  // Same data, different class: crypto's 3-day bound flags what indices' 9-day
+  // bound tolerates. A 5-day head delay is a real problem for BTC and a plausible
+  // holiday for the Hang Seng.
+  const t = (s: string) => Date.parse(s) / 1000;
+  const now = t('2026-11-01');
+  const from = t('2026-08-20');
+  const times = [t('2026-08-25'), t('2026-08-26')];
+  assert.ok(findCoverageProblem(times, 'm15', undefined, now, 'crypto', from), 'crypto must flag a 5-day head gap');
+  assert.equal(findCoverageProblem(times, 'm15', undefined, now, 'indices', from), null, 'indices must tolerate it');
+});
+
 test('findCoverageProblem gives coarser timeframes more headroom', () => {
   // Thresholds are expressed in seconds and compared against second-based gaps;
   // getting this wrong (e.g. comparing seconds to milliseconds) makes every

@@ -432,6 +432,19 @@ export function maxLegitimateGapSeconds(
   }
 }
 
+/**
+ * How late the first candle of a range may legitimately appear.
+ *
+ * Deliberately *not* `maxLegitimateGapSeconds`. That function's loose values for
+ * `d1`/`1W`/`mn1` exist because a coarse timeframe's bars are wide, not because
+ * markets close for three weeks. A start-of-range delay is bounded by the longest
+ * closure, which is a per-class fact — and the `d1` allowance of 21 days was wide
+ * enough to hide the 12-day `aaplususd` loss this exists to catch.
+ */
+export function maxLegitimateHeadShortfallSeconds(marketClass?: InstrumentCategory): number {
+  return classGapSeconds(marketClass);
+}
+
 /** Intraday interior-gap allowance, from measured maxima plus headroom. */
 function classGapSeconds(marketClass?: InstrumentCategory): number {
   switch (marketClass) {
@@ -504,7 +517,7 @@ export function maxLegitimateTailShortfallSeconds(canonicalTimeframe: string): n
 export function describeCoverageProblem(
   meta: {
     partial?: boolean;
-    partialKind?: 'interior' | 'tail';
+    partialKind?: 'interior' | 'tail' | 'head';
     partialDays?: number;
     timeframe?: string;
     warning?: string;
@@ -529,11 +542,24 @@ export function describeCoverageProblem(
       `Click Retry to fetch it again.`
     );
   }
+  if (meta.partialKind === 'head' && days !== null) {
+    return (
+      `This session's ${tf}data starts ${days} ${days === 1 ? 'day' : 'days'} late. ` +
+      `The download did not return the beginning of the range, so trades taken ` +
+      `before ${days === 1 ? 'that day' : 'those days'} cannot be trusted. ` +
+      `Click Retry to fetch it again.`
+    );
+  }
   return meta.warning ?? null;
 }
 
 export interface CoverageProblem {
-  kind: 'interior' | 'tail';
+  /**
+   * `interior` - a hole between two candles.
+   * `tail`     - the series stops before the requested end.
+   * `head`     - the series starts after the requested start.
+   */
+  kind: 'interior' | 'tail' | 'head';
   largestGapSeconds: number;
   allowedSeconds: number;
   shortfallDays?: number;
@@ -575,6 +601,7 @@ export function findCoverageProblem(
   requestedToSeconds?: number,
   nowSeconds: number = Math.floor(Date.now() / 1000),
   marketClass?: InstrumentCategory,
+  requestedFromSeconds?: number,
 ): CoverageProblem | null {
   const allowedGapSeconds = maxLegitimateGapSeconds(canonicalTimeframe, marketClass);
   const largestGapSeconds = findLargestInteriorGapSeconds(timesSeconds);
@@ -591,6 +618,46 @@ export function findCoverageProblem(
         `${canonicalTimeframe} data. This usually means an upstream download failed. ` +
         `Click Retry to re-fetch.`,
     };
+  }
+
+  // Head check: data missing from the *beginning* of the range.
+  //
+  // Neither the interior nor the tail check can see this. An interior check needs
+  // two candles with a hole between them, and a truncated start has nothing
+  // before it; the tail check looks the other way entirely. Observed for real:
+  // `aaplususd` returned only 7 of a requested 19 days, the 12 missing days all
+  // at the front, and nothing flagged it.
+  //
+  // The bound is the same measured per-class closure maximum used for interior
+  // gaps, because a legitimate delay at the start of a range *is* a closure — a
+  // range beginning on a Sunday or a holiday market opens days later. That is
+  // also why this is a measured bound rather than a hand-maintained holiday
+  // calendar: the calendars for FX, eight index markets and equities would be a
+  // large dataset that drifts silently, whereas the measured bound already covers
+  // the real failure (a multi-day block never arriving) with a false-positive
+  // rate bounded by the longest closure the market actually takes.
+  if (requestedFromSeconds !== undefined && timesSeconds.length > 0) {
+    const headStartSeconds = requestedFromSeconds;
+    // A range that has not started yet cannot be missing anything.
+    const headIsFuture = headStartSeconds > nowSeconds + PUBLICATION_LAG_DAYS * DAY_SEC;
+    const firstCandle = timesSeconds[0];
+    const allowedHeadSeconds = maxLegitimateHeadShortfallSeconds(marketClass);
+    const headShortfallSeconds = firstCandle - headStartSeconds;
+    if (!headIsFuture && headShortfallSeconds > allowedHeadSeconds) {
+      const shortfallDays = (headShortfallSeconds / DAY_SEC).toFixed(1);
+      const allowedDays = (allowedHeadSeconds / DAY_SEC).toFixed(0);
+      return {
+        kind: 'head',
+        largestGapSeconds: headShortfallSeconds,
+        allowedSeconds: allowedHeadSeconds,
+        shortfallDays: Number(shortfallDays),
+        message:
+          `Market data may be incomplete: the series starts ` +
+          `${shortfallDays} days after the beginning of the requested range, which is more than ` +
+          `the ${allowedDays}-day maximum expected for ${canonicalTimeframe} data. This usually ` +
+          `means an upstream download failed. Click Retry to re-fetch.`,
+      };
+    }
   }
 
   if (requestedToSeconds !== undefined && timesSeconds.length > 0) {

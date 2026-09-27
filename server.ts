@@ -1,4 +1,4 @@
-﻿import express from "express";
+import express from "express";
 import path from "path";
 import fs from "fs";
 import dns from "dns";
@@ -381,7 +381,7 @@ interface DownloadPayload {
    * without parsing English. `warning` stays precise for the server log and for
    * any caller that wants the detail.
    */
-  partialKind?: "interior" | "tail";
+  partialKind?: "interior" | "tail" | "head";
   /** Size of the gap or shortfall, in days. */
   partialDays?: number;
 }
@@ -715,10 +715,16 @@ function isIncompleteCachedPayload(payload: any): string | null {
     // applies to cached entries too. Absent on payloads written before this
     // existed, which fall back to the loosest allowance.
     payload.instrument?.category,
+    // Payloads record the range they were built for, so the head check applies to
+    // cached entries too. Absent on payloads written before it was recorded.
+    payload.requestedFrom
+      ? new Date(`${payload.requestedFrom}T00:00:00Z`).getTime() / 1000
+      : undefined,
   );
   if (!problem) return null;
   const days = (problem.largestGapSeconds / 86_400).toFixed(1);
-  return `${problem.kind} ${days}-day ${problem.kind === 'tail' ? 'shortfall' : 'gap'}`;
+  const noun = problem.kind === 'interior' ? 'gap' : 'shortfall';
+  return `${problem.kind} ${days}-day ${noun}`;
 }
 
 // Bounds how much upstream work a single client can ask for.
@@ -934,6 +940,9 @@ app.post("/api/download", async (req, res) => {
         new Date(`${toDate}T00:00:00Z`).getTime() / 1000,
         undefined,
         instMeta.category,
+        // The head check needs this: without it a range whose first days never
+        // arrived is indistinguishable from a range that simply started late.
+        new Date(`${fromDate}T00:00:00Z`).getTime() / 1000,
       );
       const isPartial = coverageProblem !== null;
 
@@ -966,10 +975,15 @@ app.post("/api/download", async (req, res) => {
       // upstream failure into a permanently broken session. Skipping the write
       // means the next attempt (or the client's Retry) re-downloads instead.
       if (isPartial) {
+        const where =
+          coverageProblem!.kind === 'interior' ? 'interior gap'
+          : coverageProblem!.kind === 'tail' ? 'shortfall from toDate'
+          : 'shortfall from fromDate';
         console.warn(
-          `[Dukascopy API] Not caching ${cacheKey} â€” ${coverageProblem!.kind} ` +
-          `${(coverageProblem!.largestGapSeconds / 86400).toFixed(1)}-day ` +
-          `${coverageProblem!.kind === 'tail' ? 'shortfall from toDate' : 'interior gap'}.`
+          `[Dukascopy API] Not caching ${cacheKey} 
+—
+ ${coverageProblem!.kind} ` +
+          `${(coverageProblem!.largestGapSeconds / 86400).toFixed(1)}-day ${where}.`
         );
       } else {
         memoryCache.set(cacheKey, payload);
