@@ -18,6 +18,7 @@ import {
   TimeframeId,
 } from '../lib/timeframe';
 import { describeCoverageProblem } from '../lib/dukascopyRequest';
+import { dayBoundaryMs, type ChartTimezone } from '../lib/timezone';
 
 interface LoadingState {
   isLoading: boolean;
@@ -29,7 +30,7 @@ interface LoadingState {
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
- * Resolves a session date field to a millisecond boundary.
+ * Resolves a session date field to a millisecond boundary in the chart's timezone.
  *
  * Deliberately more tolerant than `toDateBoundary` in the engine, which throws
  * on an unparseable date. The session's dates are optional here (older or
@@ -37,25 +38,55 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * sensible recent window rather than failing the load.
  *
  * That tolerance is why this is not simply the engine's function: it has a
- * genuinely different contract. The arithmetic for a *valid* `YYYY-MM-DD` is
- * identical in both, and both treat the end of a bare day as exclusive.
+ * genuinely different contract.
  */
-function toDateBoundary(dateText?: string, endOfDay = false): number {
-  if (!dateText) {
+function toDateBoundary(dateText: string | undefined, endOfDay: boolean, timeZone: ChartTimezone): number {
+  const fallback = (): number => {
     const now = Date.now();
     return endOfDay ? now - DAY_MS : now - 30 * DAY_MS;
+  };
+  if (!dateText) return fallback();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateText)) {
+    const ts = new Date(dateText).getTime();
+    return Number.isFinite(ts) ? ts : fallback();
   }
-  const date = new Date(dateText);
-  const ts = date.getTime();
-  if (!Number.isFinite(ts)) {
-    const now = Date.now();
-    return endOfDay ? now - DAY_MS : now - 30 * DAY_MS;
+  // A bare YYYY-MM-DD is a calendar day, and which instant it starts at depends
+  // on the zone it is judged in. The chart already has a configurable timezone
+  // (defaulting to the browser's), so a session day is resolved in the same zone
+  // the candles are drawn in rather than at UTC midnight — otherwise a user in
+  // New York asking for "the 27th" silently gets four hours of the 26th.
+  try {
+    return dayBoundaryMs(dateText, timeZone, endOfDay);
+  } catch {
+    return fallback();
   }
-  return /^\d{4}-\d{2}-\d{2}$/.test(dateText) && endOfDay ? ts + DAY_MS : ts;
 }
 
 function timestampSecToDate(timestampSec: number): string {
   return new Date(timestampSec * 1000).toISOString().split('T')[0];
+}
+
+/** Shifts a `YYYY-MM-DD` day string by whole days, in UTC. */
+function shiftDateString(dateText: string, deltaDays: number): string {
+  const ts = Date.parse(`${dateText}T00:00:00Z`);
+  if (!Number.isFinite(ts)) return dateText;
+  return new Date(ts + deltaDays * DAY_MS).toISOString().slice(0, 10);
+}
+
+/**
+ * Drops candles outside the exact local window.
+ *
+ * The download API can only be asked for whole UTC days, so a local-day window is
+ * always served by a slightly wider request. Without this the chart would show
+ * part of the previous day and part of the next one — for a New York user that is
+ * four hours of the 26th before their session and four hours of the day after it.
+ */
+function clipToWindow(candles: Candle[], fromTs: number, toTs: number): Candle[] {
+  if (candles.length === 0) return candles;
+  // A no-op window means the caller is not using local boundaries; leave the data
+  // alone rather than emptying it.
+  if (!(fromTs < toTs)) return candles;
+  return candles.filter((c) => c.timestamp >= fromTs && c.timestamp < toTs);
 }
 
 export function useSessionLoader() {
@@ -65,12 +96,18 @@ export function useSessionLoader() {
     setData,
     patchDataState,
     useSyntheticSeconds,
+    chartTimezone,
   } = useSimulatorStore(useShallow((state) => ({
     currentSessionId: state.currentSessionId,
     currentSession: state.sessions.find((s) => s.id === state.currentSessionId) || null,
     setData: state.setData,
     patchDataState: state.patchDataState,
     useSyntheticSeconds: state.useSyntheticSeconds,
+    // A session's calendar days are resolved in the same timezone the chart draws
+    // in, so the loaded window matches the dates the user actually picked.
+    // Deliberately part of the load effect's inputs: changing the chart timezone
+    // changes what a session's dates mean, so the data has to be re-fetched.
+    chartTimezone: state.chartTimezone,
   })));
 
   const [loadingState, setLoadingState] = useState<LoadingState>({
@@ -121,8 +158,8 @@ export function useSessionLoader() {
     activeLoadRef.current = { id: loadId, abort };
     inFlightKeyRef.current = currentKey;
 
-    let sessionStart = toDateBoundary(session.startDate);
-    let sessionEnd = toDateBoundary(session.endDate, true);
+    let sessionStart = toDateBoundary(session.startDate, false, chartTimezone);
+    let sessionEnd = toDateBoundary(session.endDate, true, chartTimezone);
 
     if (session.targetTimestamp) {
       if (session.targetTimestamp < sessionStart) {
@@ -152,7 +189,10 @@ export function useSessionLoader() {
     // (which adds 5 days of warm-up before the start and 1 day after the end).
     const sessionSpanDays = Math.max(
       1,
-      Math.round((toDateBoundary(session.endDate, true) - toDateBoundary(session.startDate)) / DAY_MS),
+      Math.round(
+        (toDateBoundary(session.endDate, true, chartTimezone) -
+          toDateBoundary(session.startDate, false, chartTimezone)) / DAY_MS,
+      ),
     );
     const loadedSpanDays = Math.max(1, Math.round((fullRangeEnd - actualFromTs) / DAY_MS));
 
@@ -179,8 +219,23 @@ export function useSessionLoader() {
     });
 
     try {
+      // The download API takes UTC *days*, but the session window is a span of
+      // local calendar days. The request therefore has to be rounded outward to
+      // whole UTC days that fully contain the local window, and the result
+      // clipped back to the exact local boundaries afterwards.
+      //
+      // Rounding the end outward by one day is what makes this correct: local
+      // midnight sits at most 14h from UTC midnight, so `toDate` derived from the
+      // local end instant would otherwise cut the request up to 14h short of the
+      // end of the user's last day. The extra day is removed by the clip below,
+      // so nothing outside the session reaches the chart.
       const fromDate = timestampSecToDate(actualFromTs / 1000);
-      const toDate = timestampSecToDate(fullRangeEnd / 1000);
+      const toDate = shiftDateString(timestampSecToDate(fullRangeEnd / 1000), 1);
+      // Clip bounds: the warm-up start (a local boundary) through the exclusive
+      // local session end. Deliberately keeps the warm-up, which exists for
+      // indicator lookback and is not shown as session data.
+      const clipFromTs = actualFromTs;
+      const clipToTs = fullRangeEnd;
 
       let candlesForSession: Candle[] = [];
       let loadedSourceTf = '1m';
@@ -249,7 +304,15 @@ export function useSessionLoader() {
         partialWarning = describeCoverageProblem(meta);
       }
 
-      setData(candlesForSession, session.id);
+      // Trim the rounded-out request back to the exact local window before it
+      // reaches the store. Done here rather than per-branch so every path — real
+      // tick, synthesized sub-minute, derived and native timeframes — is clipped
+      // identically, and so a path added later cannot forget.
+      const clipped = clipToWindow(candlesForSession, clipFromTs, clipToTs);
+      if (clipped.length !== candlesForSession.length) {
+        loadMessage = `${loadMessage} (${candlesForSession.length - clipped.length} outside session hours)`;
+      }
+      setData(clipped, session.id);
 
       // Both of these describe usable-but-not-what-you-asked-for data, so they
       // are reported as a warning rather than an error: the chart is populated
@@ -269,14 +332,14 @@ export function useSessionLoader() {
         isHydrating: false,
         isViewportLoading: false,
         progress: 100,
-        error: candlesForSession.length === 0 ? 'No market data available for this period' : null,
+        error: clipped.length === 0 ? 'No market data available for this period' : null,
         userMessage: loadMessage,
         dataWarning: warnings.length > 0 ? warnings.join(' ') : null,
         activeLoadKind: null,
-        loadedFromTs: candlesForSession[0]?.timestamp,
-        loadedToTs: candlesForSession[candlesForSession.length - 1]?.timestamp,
-        coveredFromTs: candlesForSession[0]?.timestamp,
-        coveredToTs: candlesForSession[candlesForSession.length - 1]?.timestamp,
+        loadedFromTs: clipped[0]?.timestamp,
+        loadedToTs: clipped[clipped.length - 1]?.timestamp,
+        coveredFromTs: clipped[0]?.timestamp,
+        coveredToTs: clipped[clipped.length - 1]?.timestamp,
         sourceTimeframe: loadedSourceTf,
       }, session.id);
 
@@ -320,7 +383,17 @@ export function useSessionLoader() {
   useEffect(() => {
     if (!currentSession) return;
 
-    const currentKey = `${currentSession.id}:${currentSession.instrument}:${currentSession.timeframe}:${currentSession.timeframeVersion ?? 0}:${currentSession.startDate}:${currentSession.endDate}:${currentSession.targetTimestamp ?? ''}:${useSyntheticSeconds}`;
+    // A session loaded under a different chart timezone spans different instants,
+    // so its candles must be replaced rather than reused.
+    const loadedKeyTimezone = loadedKeyRef.current?.split(':').slice(-1)[0];
+    const timezoneChanged =
+      currentSession.data.length > 0 && loadedKeyTimezone !== undefined && loadedKeyTimezone !== chartTimezone;
+
+    // The timezone is part of the request identity: a session's calendar days are
+    // resolved in the chart's timezone, so changing it changes which instants the
+    // same startDate/endDate denote. Leaving it out meant a timezone change left
+    // the previously-loaded (now wrong) window in place.
+    const currentKey = `${currentSession.id}:${currentSession.instrument}:${currentSession.timeframe}:${currentSession.timeframeVersion ?? 0}:${currentSession.startDate}:${currentSession.endDate}:${currentSession.targetTimestamp ?? ''}:${useSyntheticSeconds}:${chartTimezone}`;
 
     // If this exact request is currently in-flight, don't start a duplicate
     if (inFlightKeyRef.current === currentKey) {
@@ -333,13 +406,20 @@ export function useSessionLoader() {
       (currentSession.targetTimestamp < currentSession.data[0]?.timestamp ||
        currentSession.targetTimestamp > currentSession.data[currentSession.data.length - 1]?.timestamp);
 
-    const needsLoad = currentSession.data.length === 0 || switchPending || jumpOutside;
+    const needsLoad = currentSession.data.length === 0 || switchPending || jumpOutside || timezoneChanged;
 
     if (!needsLoad) return;
 
     // Skip if we already attempted to load this exact configuration and failed
     if (loadedKeyRef.current === currentKey && currentSession.dataState?.error) {
       return;
+    }
+
+    if (timezoneChanged) {
+      // The loaded candles span the wrong instants, so they are replaced rather
+      // than merged. The stored data is the old window; leaving it would show
+      // hours that belong to the neighbouring days.
+      loadedKeyRef.current = currentKey;
     }
 
     void loadSessionData(currentSession);
@@ -355,6 +435,7 @@ export function useSessionLoader() {
     currentSession?.dataState?.activeLoadKind,
     currentSession?.dataState?.error,
     useSyntheticSeconds,
+    chartTimezone,
     loadSessionData,
   ]);
 

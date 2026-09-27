@@ -1519,7 +1519,7 @@ export const useSimulatorStore = create<SimulatorState>()(
                     isLoading: false,
                     isViewportLoading: false,
                     error: null,
-                  }),
+                  }, state.chartTimezone),
                   // Fresh data via setData is always at the session's timeframe
                   // (either from network at that TF, or aggregated to it by
                   // DataFetcher.fetchWithDerivation). Update sourceTimeframe
@@ -1540,7 +1540,7 @@ export const useSimulatorStore = create<SimulatorState>()(
               ? applySessionData(s, newData, 'append', {
                   isViewportLoading: false,
                   error: null,
-                })
+                }, state.chartTimezone)
               : s
           )
         };
@@ -1555,7 +1555,7 @@ export const useSimulatorStore = create<SimulatorState>()(
               ? applySessionData(s, newData, 'prepend', {
                   isViewportLoading: false,
                   error: null,
-                })
+                }, state.chartTimezone)
               : s
           )
         };
@@ -1570,7 +1570,7 @@ export const useSimulatorStore = create<SimulatorState>()(
               ? applySessionData(s, newData, 'merge', {
                   isViewportLoading: false,
                   error: null,
-                })
+                }, state.chartTimezone)
               : s
           )
         };

@@ -331,6 +331,52 @@ test('toDateBoundary treats the end of a bare day as exclusive', () => {
   assert.throws(() => toDateBoundary('not-a-date'), /Invalid session date/);
 });
 
+test('toDateBoundary resolves a bare day in the chart timezone, not UTC', () => {
+  // A session's startDate is a calendar day, and the chart has a configurable
+  // timezone (default browser-local). Resolving it at UTC midnight meant a New York
+  // user's "the 27th" began at 20:00 on the 26th local.
+  assert.equal(
+    new Date(toDateBoundary('2026-08-27', false, 'America/New_York')).toISOString(),
+    '2026-08-27T04:00:00.000Z',
+  );
+  assert.equal(
+    new Date(toDateBoundary('2026-08-27', true, 'America/New_York')).toISOString(),
+    '2026-08-28T04:00:00.000Z',
+  );
+  // A zone east of UTC starts its day on the previous UTC day.
+  assert.equal(
+    new Date(toDateBoundary('2026-08-27', false, 'Asia/Tokyo')).toISOString(),
+    '2026-08-26T15:00:00.000Z',
+  );
+  // UTC, and an omitted timezone, are the same thing.
+  assert.equal(toDateBoundary('2026-08-27', false, 'UTC'), toDateBoundary('2026-08-27'));
+  // The end is the next local midnight, so a normal day is 24h and a
+  // spring-forward day is 23h. Measured to the *next day's start*, since the
+  // `endOfDay` flag is a fixed 24h step and cannot express a 23-hour local day.
+  assert.equal(
+    toDateBoundary('2026-08-27', true, 'America/New_York') - toDateBoundary('2026-08-27', false, 'America/New_York'),
+    DAY_MS,
+  );
+  assert.equal(
+    toDateBoundary('2026-03-09', false, 'America/New_York') - toDateBoundary('2026-03-08', false, 'America/New_York'),
+    23 * 3_600_000,
+  );
+
+  // The loader and the cursor seed must agree, or the replay starts on the wrong
+  // candle. Both go through this function, so pin that the zone is honoured on the
+  // path `applySessionData` actually uses.
+  assert.notEqual(
+    toDateBoundary('2026-08-27', false, 'America/New_York'),
+    toDateBoundary('2026-08-27', false, 'Asia/Tokyo'),
+  );
+
+  // A full ISO timestamp is a point in time, so a timezone must not shift it.
+  assert.equal(
+    toDateBoundary('2026-08-27T13:45:00Z', true, 'America/New_York'),
+    toDateBoundary('2026-08-27T13:45:00Z', true),
+  );
+});
+
 test('expandSubMinuteCandlesFromM1 synthesizes sub-minute candles from 1m (legacy mode)', () => {
   const minute = 60 * 1000;
   const start = Date.UTC(2024, 0, 1, 0, 0, 0);

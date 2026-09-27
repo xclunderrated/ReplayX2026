@@ -1,4 +1,5 @@
 import { findCandleIndexByTimestamp, getTimeframeIntervalMs, mergeCandles, sortAndDeduplicateCandles, auraTimeframeToDukascopy } from './timeframe';
+import { dayBoundaryMs, type ChartTimezone } from './timezone';
 import { computeTradePnL, computeTradeExcursion, getPipSize } from './orders';
 import { audioFX } from './audioFX';
 
@@ -142,7 +143,27 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const MINUTE_MS = 60 * 1000;
 const APPROX_MONTH_MS = 30 * DAY_MS;
 
-export function toDateBoundary(dateText: string, endOfDay = false): number {
+/**
+ * Resolves a session date field to a millisecond boundary.
+ *
+ * A session's `startDate` is a *calendar day*, and which instant that day begins
+ * at depends on the timezone it is being judged in. Passing `timeZone` resolves
+ * it the way the chart does — the same zone the user sees the candles in — rather
+ * than at UTC midnight.
+ *
+ * The asymmetry matters: the session loader builds the data window from this
+ * function and `applySessionData` seeds the replay cursor from it, so if the two
+ * disagree about the zone the cursor lands on the wrong candle. Both therefore
+ * take the timezone from the same source.
+ *
+ * Omitting `timeZone` keeps the old UTC-midnight behaviour, which is what a bare
+ * `YYYY-MM-DD` means to `new Date()`.
+ */
+export function toDateBoundary(dateText: string, endOfDay = false, timeZone?: ChartTimezone): number {
+  if (timeZone !== undefined && /^\d{4}-\d{2}-\d{2}$/.test(dateText)) {
+    return dayBoundaryMs(dateText, timeZone, endOfDay);
+  }
+
   const ts = new Date(dateText).getTime();
   if (!Number.isFinite(ts)) {
     throw new Error(`Invalid session date: ${dateText}`);
@@ -276,6 +297,12 @@ export function applySessionData<T extends { data: TCandle[]; currentIndex: numb
   incomingData: TCandle[],
   mode: DataMergeMode,
   patch: DataStatePatch = {},
+  /**
+   * Timezone the session's calendar days are judged in. Must be the same one the
+   * loader used to build the data window, or the initial cursor lands on the
+   * wrong candle.
+   */
+  timeZone?: ChartTimezone,
 ): T {
   const minDefined = (...values: Array<number | undefined>): number | undefined => {
     const finite = values.filter((value): value is number => typeof value === 'number' && Number.isFinite(value));
@@ -294,7 +321,7 @@ export function applySessionData<T extends { data: TCandle[]; currentIndex: numb
     ? normalizedIncoming
     : mergeCandles(session.data, normalizedIncoming);
 
-  const defaultStartTs = session.startDate ? toDateBoundary(session.startDate) : undefined;
+  const defaultStartTs = session.startDate ? toDateBoundary(session.startDate, false, timeZone) : undefined;
   const preserveTimestamp = mode === 'replace'
     ? session.targetTimestamp ?? session.lastReplayTimestamp ?? session.data[session.currentIndex]?.timestamp ?? defaultStartTs
     : session.data[session.currentIndex]?.timestamp ?? session.targetTimestamp;
