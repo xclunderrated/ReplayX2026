@@ -292,14 +292,30 @@ export function aggregateCandles(
   const periodSec = getTimeframeSeconds(targetTf);
   const effectiveLimit = Math.min(limitIndex, sortedInput.length - 1);
 
-  // Derive the input granularity from the smallest gap between consecutive
+  // Derive the input granularity from the *most common* gap between consecutive
   // candles. Targeting a finer period than the base data is impossible — the
   // caller must use real sub-minute base data (e.g. s1) for those targets.
-  let baseSec = 0;
+  //
+  // This used to use the minimum gap, which is not a robust estimator of a
+  // series' granularity: a single anomalous tight pair (a duplicated or
+  // mis-timestamped bar) makes it believe sub-second data exists, and the guard
+  // below then permits deriving sub-minute candles from what is really coarser
+  // data — producing buckets that do not correspond to any real bar. The mode is
+  // the right statistic: for a genuine series the overwhelming majority of gaps
+  // equal its granularity, and an outlier cannot move it.
+  const gapCounts = new Map<number, number>();
   for (let i = 1; i <= effectiveLimit; i++) {
     const gapSec = Math.round((sortedInput[i].timestamp - sortedInput[i - 1].timestamp) / 1000);
-    if (gapSec > 0) {
-      baseSec = baseSec === 0 ? gapSec : Math.min(baseSec, gapSec);
+    if (gapSec > 0) gapCounts.set(gapSec, (gapCounts.get(gapSec) ?? 0) + 1);
+  }
+  let baseSec = 0;
+  let bestCount = 0;
+  for (const [gapSec, count] of gapCounts) {
+    // Ties resolve to the smaller gap, matching the old behaviour on a uniform
+    // series where every gap is equal.
+    if (count > bestCount) {
+      bestCount = count;
+      baseSec = gapSec;
     }
   }
   if (baseSec > 0 && periodSec < baseSec) {
@@ -421,9 +437,54 @@ export function sortAndDeduplicateCandles(data: Candle[]): Candle[] {
   return normalizeCandles(data);
 }
 
+/**
+ * True when timestamps are non-decreasing.
+ *
+ * Used to validate inputs to the linear merge below. That merge is only correct
+ * for sorted input; given unsorted input it does not fail, it silently emits a
+ * corrupt series — and this is the path feeding replay order entry, exits and
+ * realised P&L, so a corrupt series is a corrupt trade journal.
+ */
+function isNonDecreasing(candles: Candle[]): boolean {
+  for (let i = 1; i < candles.length; i++) {
+    if (candles[i].timestamp < candles[i - 1].timestamp) return false;
+  }
+  return true;
+}
+
+/**
+ * Merges two candle series, preferring `incoming` on a timestamp collision.
+ *
+ * Both inputs must be sorted ascending by timestamp. Rather than trust that, it
+ * is verified: an unsorted input is normalised first. The previous code
+ * documented an assumption ("DataFetcher already sorts, validates, and dedupes
+ * incoming data") that was never verified for every caller, and the failure mode
+ * of being wrong is silent corruption of the replay rather than an error.
+ *
+ * Self-healing is preferred over throwing here. This runs inside a state update
+ * on the hot replay path, where throwing would break playback entirely; sorting
+ * instead means a caller that hands over bad data gets correct data and a
+ * warning, not a dead session.
+ */
 export function mergeCandles(existing: Candle[], incoming: Candle[]): Candle[] {
   if (incoming.length === 0) return existing;
   if (existing.length === 0) return normalizeCandles(incoming);
+
+  // O(n) in the normal case, no sort. Only pays for a sort if actually needed.
+  if (!isNonDecreasing(existing)) {
+    console.warn(
+      `[timeframe] mergeCandles received an unsorted "existing" series (${existing.length} candles); sorting before merge.`,
+    );
+    existing = normalizeCandles(existing);
+  }
+  if (!isNonDecreasing(incoming)) {
+    console.warn(
+      `[timeframe] mergeCandles received an unsorted "incoming" series (${incoming.length} candles); sorting before merge.`,
+    );
+    incoming = normalizeCandles(incoming);
+  }
+  if (existing.length === 0) return incoming;
+
   const result: Candle[] = new Array(existing.length + incoming.length);
   let i = 0, j = 0, k = 0;
   while (i < existing.length && j < incoming.length) {

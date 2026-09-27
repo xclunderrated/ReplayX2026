@@ -350,16 +350,32 @@ function sanitizeCandles(rawData: any[]): SanitizedCandle[] {
   if (!Array.isArray(rawData)) return [];
   const timeMap = new Map<number, SanitizedCandle>();
   for (const item of rawData) {
-    if (!item.timestamp) continue;
-    const sec = Math.floor(item.timestamp / 1000);
-    if (isNaN(sec) || !item.open || !item.high || !item.low || !item.close) continue;
+    if (!item || !item.timestamp) continue;
+    const sec = Math.floor(Number(item.timestamp) / 1000);
+    if (!Number.isFinite(sec)) continue;
+
+    // Parse first, then validate. The previous form tested the raw values for
+    // truthiness (`!item.open`) and only then called `Number()`, so a non-numeric
+    // price such as the string "abc" passed the check — it is truthy — and was
+    // stored as NaN, poisoning every downstream aggregate that touched it. A
+    // zero price is still rejected, since it is not a plausible quote for any
+    // instrument here, but on the parsed value rather than on truthiness.
+    const open = Number(item.open);
+    const high = Number(item.high);
+    const low = Number(item.low);
+    const close = Number(item.close);
+    const volume = item.volume === undefined || item.volume === null ? 0 : Number(item.volume);
+    if (!Number.isFinite(open) || !Number.isFinite(high) || !Number.isFinite(low) || !Number.isFinite(close)) continue;
+    if (open === 0 || high === 0 || low === 0 || close === 0) continue;
+    if (high < low) continue;
+
     timeMap.set(sec, {
       time: sec,
-      open: Number(item.open),
-      high: Number(item.high),
-      low: Number(item.low),
-      close: Number(item.close),
-      volume: Number(item.volume || 0),
+      open,
+      high,
+      low,
+      close,
+      volume: Number.isFinite(volume) ? volume : 0,
     });
   }
   return Array.from(timeMap.values()).sort((a, b) => a.time - b.time);
