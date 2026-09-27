@@ -378,11 +378,13 @@ export function findLargestInteriorGapSeconds(timesSeconds: number[]): number {
  * How large an interior gap can legitimately get before it means data is
  * missing rather than the market being closed.
  *
- * FX closes Friday ~22:00 UTC and reopens Sunday ~22:00 UTC, so a ~72 hour gap
- * is routine; index CFDs sit closed longer. The thresholds are deliberately
- * generous so this never fires on a real closure — it exists to catch the
- * failure mode where a whole download (typically a calendar month of a coarse
- * feed) never arrived and got silently accepted.
+ * Measured against real Dukascopy EUR/USD data over holiday-crossing ranges,
+ * the largest legitimate interior gap is ~3 days: Dukascopy's daily and hourly
+ * feeds emit a Sunday bar for the Sunday open, so the Friday-to-Sunday closure
+ * shows up as roughly a 2-day hole rather than the 3+ days a naive
+ * Friday-22:00-to-Monday-22:00 reading would suggest. The 7-day intraday bar
+ * therefore carries a little over 2x headroom, while still being far below the
+ * multi-week hole that a failed month file produces.
  */
 export function maxLegitimateGapSeconds(canonicalTimeframe: string): number {
   switch (canonicalTimeframe) {
@@ -397,39 +399,120 @@ export function maxLegitimateGapSeconds(canonicalTimeframe: string): number {
   }
 }
 
+/**
+ * How far the last returned candle may legitimately fall short of the requested
+ * end of range.
+ *
+ * This is a separate question from the interior-gap tolerance, and the failure
+ * it exists to catch is the *common* one: when an upstream file is missing, the
+ * data that never arrived is at the end of the range, so the series simply stops
+ * early. An interior-gap check cannot see that at all — there is no gap, the
+ * candles just end.
+ *
+ * Measured against real EUR/USD data (see `toDate - lastCandle` over weekend and
+ * FX-holiday boundaries), the routine shortfall is 1-3 days: `toDate` is
+ * exclusive, so a range ending on a weekend legitimately stops on the preceding
+ * Friday. The 10-day allowance also covers ranges that reach past the most
+ * recently published data, which Dukascopy serves with roughly a day of lag.
+ */
+export function maxLegitimateTailShortfallSeconds(canonicalTimeframe: string): number {
+  switch (canonicalTimeframe) {
+    // A monthly session ending mid-month legitimately stops at the 1st.
+    case 'mn1':
+      return 45 * DAY_SEC;
+    case '1W':
+      return 14 * DAY_SEC;
+    default:
+      return 10 * DAY_SEC;
+  }
+}
+
 export interface CoverageProblem {
+  kind: 'interior' | 'tail';
   largestGapSeconds: number;
-  allowedGapSeconds: number;
+  allowedSeconds: number;
+  shortfallDays?: number;
   message: string;
 }
 
 /**
- * Detects an interior gap too large to be a market closure.
+ * How far ahead of the current time a range may reach and still be checked for
+ * a missing tail.
  *
- * This is the guard the download path previously lacked: the only completeness
- * check it performed was `candles.length === 0`, so a partially-downloaded
- * range looked exactly like a successful one. A result that trips this check is
- * still returned to the caller (it is better than nothing, and the caller can
- * see how far the data reaches) but it is flagged and never cached, so the next
- * attempt re-downloads instead of being served the same truncated payload.
+ * Dukascopy publishes with roughly a day of lag (on 2026-09-27 its latest
+ * EUR/USD bar was 2026-09-25), so a range ending today or tomorrow legitimately
+ * has nothing to show for the last day or two.
+ */
+const PUBLICATION_LAG_DAYS = 2;
+
+/**
+ * Detects a returned series that is missing data, either in the middle or at
+ * the end.
+ *
+ * `requestedToSeconds` is the end of the requested range as a Unix timestamp.
+ * Supplying it enables the tail check, which is the one that matters in
+ * practice; omit it (e.g. for a cache entry written before this existed) and
+ * only interior gaps are considered.
+ *
+ * A range reaching into the future is exempt from the tail check: no data can
+ * exist for it yet, so a shortfall there is the expected result rather than a
+ * failed download. Interior gaps are still checked in that case, since a month
+ * missing from the middle of a range is a real problem wherever the range ends.
+ *
+ * A result that trips this is still returned to the caller — it is better than
+ * nothing, and the caller can see how far the data reaches — but it is flagged
+ * and never cached, so the next attempt re-downloads instead of being served
+ * the same truncated payload.
  */
 export function findCoverageProblem(
   timesSeconds: number[],
   canonicalTimeframe: string,
+  requestedToSeconds?: number,
+  nowSeconds: number = Math.floor(Date.now() / 1000),
 ): CoverageProblem | null {
-  const largestGapSeconds = findLargestInteriorGapSeconds(timesSeconds);
   const allowedGapSeconds = maxLegitimateGapSeconds(canonicalTimeframe);
-  if (largestGapSeconds <= allowedGapSeconds) return null;
+  const largestGapSeconds = findLargestInteriorGapSeconds(timesSeconds);
+  if (largestGapSeconds > allowedGapSeconds) {
+    const gapDays = (largestGapSeconds / DAY_SEC).toFixed(1);
+    const allowedDays = (allowedGapSeconds / DAY_SEC).toFixed(0);
+    return {
+      kind: 'interior',
+      largestGapSeconds,
+      allowedSeconds: allowedGapSeconds,
+      message:
+        `Market data may be incomplete: a ${gapDays}-day gap was found inside the ` +
+        `returned series, which is larger than the ${allowedDays}-day maximum expected for ` +
+        `${canonicalTimeframe} data. This usually means an upstream download failed. ` +
+        `Click Retry to re-fetch.`,
+    };
+  }
 
-  const gapDays = (largestGapSeconds / DAY_SEC).toFixed(1);
-  const allowedDays = (allowedGapSeconds / DAY_SEC).toFixed(0);
-  return {
-    largestGapSeconds,
-    allowedGapSeconds,
-    message:
-      `Market data may be incomplete: a ${gapDays}-day gap was found inside the ` +
-      `returned series, which is larger than the ${allowedDays}-day maximum expected for ` +
-      `${canonicalTimeframe} data. This usually means an upstream download failed. ` +
-      `Click Retry to re-fetch.`,
-  };
+  if (requestedToSeconds !== undefined && timesSeconds.length > 0) {
+    // A range that reaches into the future cannot have data yet, so a shortfall
+    // there is expected rather than a failure — flagging it would tell the user
+    // an upstream download broke when they simply asked for future dates.
+    const reachesFuture = requestedToSeconds > nowSeconds + PUBLICATION_LAG_DAYS * DAY_SEC;
+    // Compare against the end of the requested end day, since `toDate` is
+    // exclusive in dukascopy-node.
+    const lastCandle = timesSeconds[timesSeconds.length - 1];
+    const shortfallSeconds = requestedToSeconds + DAY_SEC - lastCandle;
+    const allowedTailSeconds = maxLegitimateTailShortfallSeconds(canonicalTimeframe);
+    if (!reachesFuture && shortfallSeconds > allowedTailSeconds) {
+      const shortfallDays = (shortfallSeconds / DAY_SEC).toFixed(1);
+      const allowedDays = (allowedTailSeconds / DAY_SEC).toFixed(0);
+      return {
+        kind: 'tail',
+        largestGapSeconds: shortfallSeconds,
+        allowedSeconds: allowedTailSeconds,
+        shortfallDays: Number(shortfallDays),
+        message:
+          `Market data may be incomplete: the series stops ` +
+          `${shortfallDays} days before the end of the requested range, which is more than the ` +
+          `${allowedDays}-day maximum expected for ${canonicalTimeframe} data. This usually means ` +
+          `an upstream download failed. Click Retry to re-fetch.`,
+      };
+    }
+  }
+
+  return null;
 }

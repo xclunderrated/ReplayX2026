@@ -641,6 +641,37 @@ function enforceS1CacheLimit(maxBytes = S1_MAX_TOTAL_BYTES): void {
   }
 }
 
+/**
+ * Detects a cached payload that was written by a download which silently lost
+ * part of its range.
+ *
+ * Freshly-built payloads are already checked before being cached, but files
+ * written by earlier versions of this endpoint predate that check — so a
+ * truncated H1/H4 series produced before the fix would otherwise be served
+ * forever, leaving the original bug in place for anyone who upgrades without
+ * clearing `.dukascopy-cache`.
+ *
+ * Returns a short reason to discard the entry, or null when it is usable.
+ */
+function isIncompleteCachedPayload(payload: any): string | null {
+  if (!payload || !Array.isArray(payload.candles) || payload.candles.length === 0) {
+    return 'no candles';
+  }
+  // `requestedTo` is absent on payloads written before it was recorded, in which
+  // case only interior gaps can be checked.
+  const requestedTo = payload.requestedTo
+    ? new Date(`${payload.requestedTo}T00:00:00Z`).getTime() / 1000
+    : undefined;
+  const problem = findCoverageProblem(
+    payload.candles.map((c: SanitizedCandle) => c.time),
+    String(payload.timeframe ?? 'm1'),
+    requestedTo,
+  );
+  if (!problem) return null;
+  const days = (problem.largestGapSeconds / 86_400).toFixed(1);
+  return `${problem.kind} ${days}-day ${problem.kind === 'tail' ? 'shortfall' : 'gap'}`;
+}
+
 // Download Dukascopy historical data endpoint
 app.post("/api/download", async (req, res) => {
   const startTimeMs = Date.now();
@@ -675,9 +706,19 @@ app.post("/api/download", async (req, res) => {
     // 1. Check in-memory cache first (0ms instant)
     if (memoryCache.has(cacheKey)) {
       const cachedData = memoryCache.get(cacheKey);
-      const latencyMs = Date.now() - startTimeMs;
-      console.log(`[Dukascopy API] In-Memory Cache Hit for ${cacheKey} (${latencyMs}ms)`);
-      return res.json({ ...cachedData, cached: true, latencyMs });
+      // Validate on read as well as on write. Entries written before this
+      // guard existed — including ones seeded from an on-disk file below — can
+      // be a truncated series, and serving those forever would leave the bug in
+      // place for anyone who upgrades without clearing their cache.
+      const stale = isIncompleteCachedPayload(cachedData);
+      if (stale) {
+        console.warn(`[Dukascopy API] Discarding incomplete in-memory cache entry for ${cacheKey} (${stale})`);
+        memoryCache.delete(cacheKey);
+      } else {
+        const latencyMs = Date.now() - startTimeMs;
+        console.log(`[Dukascopy API] In-Memory Cache Hit for ${cacheKey} (${latencyMs}ms)`);
+        return res.json({ ...cachedData, cached: true, latencyMs });
+      }
     }
 
     // 2. Check disk JSON cache second (<5ms)
@@ -685,10 +726,20 @@ app.post("/api/download", async (req, res) => {
       try {
         const rawJson = fs.readFileSync(processedJsonPath, "utf-8");
         const parsedData = JSON.parse(rawJson);
-        memoryCache.set(cacheKey, parsedData);
-        const latencyMs = Date.now() - startTimeMs;
-        console.log(`[Dukascopy API] Disk JSON Cache Hit for ${cacheKey} (${latencyMs}ms)`);
-        return res.json({ ...parsedData, cached: true, latencyMs });
+        const stale = isIncompleteCachedPayload(parsedData);
+        if (stale) {
+          console.warn(`[Dukascopy API] Discarding incomplete disk cache file for ${cacheKey} (${stale}), re-fetching...`);
+          try {
+            fs.unlinkSync(processedJsonPath);
+          } catch {
+            // best effort: a leftover file is re-checked on the next request
+          }
+        } else {
+          memoryCache.set(cacheKey, parsedData);
+          const latencyMs = Date.now() - startTimeMs;
+          console.log(`[Dukascopy API] Disk JSON Cache Hit for ${cacheKey} (${latencyMs}ms)`);
+          return res.json({ ...parsedData, cached: true, latencyMs });
+        }
       } catch (err) {
         console.warn(`[Dukascopy API] Stale JSON cache read error for ${cacheKey}, re-fetching...`);
       }
@@ -788,11 +839,16 @@ app.post("/api/download", async (req, res) => {
       // used to verify, which is why a download that silently lost a whole
       // calendar month (a 429 on one file, swallowed by failAfterRetryCount)
       // looked identical to a successful one — and was then cached, making the
-      // truncated series permanent. A gap larger than any real market closure
-      // means an upstream file is missing.
+      // truncated series permanent.
+      //
+      // The tail check is the one that matters here: when the missing file is
+      // the most recent month, the data that never arrived is at the *end* of
+      // the range, so the series just stops early. An interior-gap check cannot
+      // see that, because there is no gap — the candles simply end.
       const coverageProblem = findCoverageProblem(
         responseCandles.map((c) => c.time),
         actualTimeframe,
+        new Date(`${toDate}T00:00:00Z`).getTime() / 1000,
       );
       const isPartial = coverageProblem !== null;
 
@@ -819,8 +875,9 @@ app.post("/api/download", async (req, res) => {
       // means the next attempt (or the client's Retry) re-downloads instead.
       if (isPartial) {
         console.warn(
-          `[Dukascopy API] Not caching ${cacheKey} — result has a ` +
-          `${(coverageProblem!.largestGapSeconds / 86400).toFixed(1)}-day gap.`
+          `[Dukascopy API] Not caching ${cacheKey} — ${coverageProblem!.kind} ` +
+          `${(coverageProblem!.largestGapSeconds / 86400).toFixed(1)}-day ` +
+          `${coverageProblem!.kind === 'tail' ? 'shortfall from toDate' : 'interior gap'}.`
         );
       } else {
         memoryCache.set(cacheKey, payload);

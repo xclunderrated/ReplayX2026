@@ -135,7 +135,12 @@ export function useSessionLoader() {
     // renders, so without this the user has no way to tell that a 30-day Tick
     // session only contains 3 days of data.
     const clamped = actualFromTs > fullRangeStart;
-    const requestedSpanDays = Math.round((fullRangeEnd - fullRangeStart) / DAY_MS);
+    // Report the session's own length, not the padded request window
+    // (which adds 5 days of warm-up before the start and 1 day after the end).
+    const sessionSpanDays = Math.max(
+      1,
+      Math.round((toDateBoundary(session.endDate, true) - toDateBoundary(session.startDate)) / DAY_MS),
+    );
     const loadedSpanDays = Math.max(1, Math.round((fullRangeEnd - actualFromTs) / DAY_MS));
 
     patchDataState({
@@ -241,7 +246,7 @@ export function useSessionLoader() {
         warnings.push(
           `${session.timeframe} data is capped at ${maxRangeDays} day${maxRangeDays === 1 ? '' : 's'} per request, ` +
           `so only the most recent ${loadedSpanDays} day${loadedSpanDays === 1 ? '' : 's'} of this ` +
-          `${requestedSpanDays}-day session were loaded. Shorten the session to match.`,
+          `${sessionSpanDays}-day session were loaded. Shorten the session to match.`,
         );
       }
       if (partialWarning) warnings.push(partialWarning);

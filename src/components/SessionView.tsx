@@ -95,10 +95,15 @@ export const SessionView: React.FC<{ onOpenJournal?: () => void; onOpenSettings?
   const [settingsDrawingId, setSettingsDrawingId] = useState<string | null>(null);
   const [captureRequestId, setCaptureRequestId] = useState(0);
   // Remembers the last data warning the user dismissed, so a *new* warning still
-  // surfaces but the current one does not nag on every re-render.
+  // surfaces but the current one does not nag on every re-render. Keyed by
+  // session as well as text: two sessions can produce byte-identical warnings
+  // (same timeframe and day counts), and dismissing one must not silently
+  // suppress the other.
   const [dismissedDataWarning, setDismissedDataWarning] = useState<string | null>(null);
   const dataWarning = session.dataState?.dataWarning ?? null;
-  const visibleDataWarning = dataWarning && dataWarning !== dismissedDataWarning ? dataWarning : null;
+  const dataWarningKey = dataWarning ? `${session.id}::${dataWarning}` : null;
+  const visibleDataWarning =
+    dataWarningKey && dataWarningKey !== dismissedDataWarning ? dataWarning : null;
 
   // Drawing system keyboard listener
   React.useEffect(() => {
@@ -567,15 +572,19 @@ export const SessionView: React.FC<{ onOpenJournal?: () => void; onOpenSettings?
               )}
 
               {/* Non-blocking data warning: the chart is usable, but not for the
-                  full range the session asked for. Hidden while the loading /
-                  error overlay owns the screen. */}
-              {visibleDataWarning && session.data.length > 0 && (
+                  full range the session asked for. Suppressed whenever the
+                  loading/error overlay owns the screen. */}
+              {visibleDataWarning
+                && session.data.length > 0
+                && !session.dataState?.isLoading
+                && !session.dataState?.error
+                && (
                 <div className="absolute top-2 left-1/2 z-40 w-[min(38rem,calc(100%-2rem))] -translate-x-1/2">
                   <div className="flex items-start gap-2 rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 shadow-lg backdrop-blur">
                     <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-amber-400" />
                     <p className="flex-1 text-[11px] leading-relaxed text-amber-100">{visibleDataWarning}</p>
                     <button
-                      onClick={() => setDismissedDataWarning(visibleDataWarning)}
+                      onClick={() => setDismissedDataWarning(dataWarningKey)}
                       className="flex-shrink-0 rounded px-1.5 text-[10px] font-semibold uppercase tracking-wider text-amber-300/80 hover:text-amber-100"
                     >
                       Dismiss

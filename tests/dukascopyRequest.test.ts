@@ -214,42 +214,160 @@ test('findLargestInteriorGapSeconds measures the hole in a series', () => {
 });
 
 test('findCoverageProblem tolerates a normal weekend closure', () => {
-  // Dukascopy's FX feed closes Friday ~22:00 UTC and reopens Sunday ~22:00 UTC,
-  // so the routine hole in an intraday series is 48 hours. That must never be
-  // reported as missing data.
+  // Dukascopy's feeds emit a Sunday bar for the Sunday open, so the routine hole
+  // in an intraday series between the Friday close and that Sunday bar is about
+  // two days. That must never be reported as missing data.
   // 2024-08-23 is a Friday and 2024-08-25 the following Sunday.
   const friday = Date.UTC(2024, 7, 23, 22, 0, 0) / 1000;
-  const sunday = Date.UTC(2024, 7, 25, 22, 0, 0) / 1000;
+  const sundayBar = Date.UTC(2024, 7, 25, 22, 0, 0) / 1000;
   assert.equal(new Date(friday * 1000).getUTCDay(), 5, 'fixture starts on a Friday');
-  assert.equal(new Date(sunday * 1000).getUTCDay(), 0, 'fixture resumes on a Sunday');
-  assert.equal(sunday - friday, 48 * 3600, 'fixture is a 48-hour weekend gap');
+  assert.equal(new Date(sundayBar * 1000).getUTCDay(), 0, 'fixture resumes with a Sunday bar');
+  assert.equal(sundayBar - friday, 48 * 3600, 'fixture is a 48-hour weekend gap');
 
-  const times = [friday, sunday, sunday + 3600];
+  const times = [friday, sundayBar, sundayBar + 3600];
   assert.equal(findCoverageProblem(times, 'm15'), null);
   assert.equal(findCoverageProblem(times, 'h1'), null);
   assert.equal(findCoverageProblem(times, 'd1'), null);
 });
 
-test('findCoverageProblem flags a missing calendar month', () => {
-  // The exact failure this guard exists for: a 429 on one monthly file was
-  // swallowed by failAfterRetryCount: false, so an H1 request spanning a month
-  // boundary returned data that simply stopped there and was then cached.
-  // August is present throughout; the whole of September is absent.
+test('findCoverageProblem flags a series that stops before the end of the range', () => {
+  // This is the shape the real bug produced. The September hourly file 429'd, so
+  // September was never downloaded: the series simply ENDS at the last August
+  // candle. There is no interior gap at all, so a gap-only check is blind to it.
+  // August is dense here so the tail is the only anomaly.
+  const denseAugust = (): number[] => {
+    const out: number[] = [];
+    for (let day = 1; day <= 31; day++) out.push(Date.UTC(2026, 7, day) / 1000);
+    out.push(Date.UTC(2026, 7, 31, 23) / 1000);
+    return out;
+  };
+  const times = denseAugust();
+
+  // Interior gaps are 1 day, so with no requestedTo there is nothing to report.
+  assert.equal(findCoverageProblem(times, 'h1'), null);
+
+  // Request ran to 2026-09-27 but data stops 2026-08-31 23:00.
+  const toSep27 = Date.UTC(2026, 8, 27) / 1000;
+  const problem = findCoverageProblem(times, 'h1', toSep27, toSep27);
+  assert.ok(problem, 'a series ending 27 days early must be reported');
+  assert.equal(problem.kind, 'tail');
+  assert.match(problem.message, /stops 27\.0 days before the end/);
+  assert.match(problem.message, /Retry/);
+});
+
+test('findCoverageProblem flags an interior hole when the tail is present', () => {
+  // The complementary shape: a month missing from the *middle* of the range.
   const aug1 = Date.UTC(2026, 7, 1) / 1000;
   const aug15 = Date.UTC(2026, 7, 15) / 1000;
-  const aug31Last = Date.UTC(2026, 7, 31, 23, 0, 0) / 1000;
   const sep25 = Date.UTC(2026, 8, 25) / 1000;
-  const times = [aug1, aug15, aug31Last, sep25, sep25 + 3600];
+  const times = [aug1, aug15, sep25, sep25 + 3600];
 
   const problem = findCoverageProblem(times, 'h1');
   assert.ok(problem, 'a whole missing month must be reported');
-  // Aug 31 23:00 -> Sep 25 00:00 is 24 days and 1 hour, and it is the largest
-  // gap in the series (the intra-August gaps are 14 and ~17 days).
-  assert.equal(problem.largestGapSeconds, sep25 - aug31Last);
-  assert.ok(problem.largestGapSeconds > 7 * DAY_SEC, 'gap must exceed the 7-day bar');
-  assert.match(problem.message, /incomplete/i);
-  assert.match(problem.message, /24\.0-day gap/);
-  assert.match(problem.message, /Retry/);
+  assert.equal(problem.kind, 'interior');
+  // Aug 15 -> Sep 25 is 41 days.
+  assert.equal(problem.largestGapSeconds, sep25 - aug15);
+  assert.match(problem.message, /41\.0-day gap/);
+});
+
+test('the tail check tolerates weekends, holidays and unpublished data', () => {
+  // Measured against real Dukascopy EUR/USD data: a range ending on a weekend
+  // legitimately stops on the preceding Friday (2-3 days), and a range reaching
+  // past the most recently published data can be ~7 days short.
+  const toDate = (y: number, m: number, d: number) => Date.UTC(y, m, d) / 1000;
+  // Pinned after every range below, so none of them counts as future-reaching
+  // and the tail check is always active.
+  const now = Date.UTC(2026, 10, 1) / 1000;
+
+  // Ends Monday 2026-09-28, data stops Friday 2026-09-25 -> 3 days.
+  assert.equal(
+    findCoverageProblem(
+      [Date.UTC(2026, 8, 24) / 1000, Date.UTC(2026, 8, 25, 21) / 1000],
+      'h1',
+      toDate(2026, 8, 28),
+      now,
+    ),
+    null,
+  );
+
+  // Ends in the FX holiday cluster, data stops the prior Friday -> 3 days.
+  assert.equal(
+    findCoverageProblem(
+      [Date.UTC(2025, 11, 29) / 1000, Date.UTC(2025, 11, 31, 21) / 1000],
+      'h1',
+      toDate(2026, 0, 3),
+      now,
+    ),
+    null,
+  );
+
+  // Reaches ~7 days past the last published bar -> still tolerated.
+  assert.equal(
+    findCoverageProblem(
+      [Date.UTC(2026, 8, 24) / 1000, Date.UTC(2026, 8, 25, 21) / 1000],
+      'h1',
+      toDate(2026, 9, 2),
+      now,
+    ),
+    null,
+  );
+
+  // But 30 days short is not.
+  assert.equal(
+    findCoverageProblem(
+      [Date.UTC(2026, 7, 31, 21) / 1000],
+      'h1',
+      toDate(2026, 8, 30),
+      now,
+    )?.kind,
+    'tail',
+  );
+});
+
+test('a range reaching into the future is not treated as a failed download', () => {
+  // Dukascopy cannot have data for dates that have not happened, so a session
+  // whose end date is in the future legitimately stops at the last published bar.
+  // Flagging that would tell the user an upstream download broke when they only
+  // asked for future dates — and would stop the result being cached at all.
+  const nowSeconds = Date.UTC(2026, 8, 27) / 1000;      // "today"
+  const lastPublished = Date.UTC(2026, 8, 25, 21) / 1000; // latest available bar
+
+  // toDate 2026-10-10, two weeks out: data correctly ends 2026-09-25.
+  const futureTo = Date.UTC(2026, 9, 10) / 1000;
+  assert.equal(findCoverageProblem([lastPublished], 'h1', futureTo, nowSeconds), null);
+
+  // toDate 2026-11-27, two months out: still not a failure.
+  const farFuture = Date.UTC(2026, 10, 27) / 1000;
+  assert.equal(findCoverageProblem([lastPublished], 'h1', farFuture, nowSeconds), null);
+
+  // But a genuinely missing month in the middle of a future-reaching range is
+  // still caught by the interior check.
+  const withHole = [
+    Date.UTC(2026, 6, 1) / 1000,
+    Date.UTC(2026, 7, 1) / 1000,
+    lastPublished,
+  ];
+  assert.equal(findCoverageProblem(withHole, 'h1', farFuture, nowSeconds)?.kind, 'interior');
+
+  // A real tail failure that is *not* in the future is still caught.
+  const pastTo = Date.UTC(2026, 8, 27) / 1000;
+  const stopsEarly = [Date.UTC(2026, 7, 31, 21) / 1000];
+  assert.equal(findCoverageProblem(stopsEarly, 'h1', pastTo, nowSeconds)?.kind, 'tail');
+});
+
+test('monthly sessions ending mid-month are not flagged as short', () => {
+  // A monthly series is stamped on the 1st, so a session ending on the 29th
+  // legitimately stops ~28 days short. The tail tolerance has to allow that.
+  const toDate = Date.UTC(2026, 8, 30) / 1000;
+  const now = Date.UTC(2026, 8, 30) / 1000;
+  const lastMonthly = Date.UTC(2026, 8, 1) / 1000;
+  assert.equal(findCoverageProblem([lastMonthly], 'mn1', toDate, now), null);
+
+  // A genuinely missing month is still caught.
+  assert.equal(
+    findCoverageProblem([Date.UTC(2026, 6, 1) / 1000], 'mn1', toDate, now)?.kind,
+    'tail',
+  );
 });
 
 test('findCoverageProblem gives coarser timeframes more headroom', () => {
