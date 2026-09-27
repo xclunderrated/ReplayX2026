@@ -47,6 +47,7 @@ if (!fs.existsSync(newsCacheDir)) {
 // because this module binds a port at import time.
 export type { InstrumentMeta } from "./src/lib/instruments";
 import { SUPPORTED_INSTRUMENTS, unavailableReason, type InstrumentMeta } from "./src/lib/instruments";
+import { createBoundedCache, enforceCacheLimits, writeCacheFile } from "./src/lib/cacheStore";
 
 /**
  * The set of instruments Dukascopy actually serves, taken from dukascopy-node's
@@ -231,8 +232,26 @@ function getInstrumentCurrenciesForServer(instrument: string): string[] {
   return ['USD'];
 }
 
-// In-Memory Fast Cache Map
-const memoryCache = new Map<string, any>();
+/**
+ * Upper bound on the in-process payload cache.
+ *
+ * Every download is retained for the lifetime of the process, and the same data
+ * is then also held client-side as `Candle[]` in milliseconds — so a session's
+ * candles exist twice at once, in two representations. With no bound, browsing
+ * many instruments, ranges and timeframes grows this without limit for as long
+ * as the server is up.
+ *
+ * Counted rather than byte-weighted because payloads vary by orders of magnitude
+ * (a 3-day s1 window vs a 5-year d1 series) and a byte budget would need
+ * per-entry size tracking to be meaningful. 48 entries comfortably covers a
+ * working session's worth of pivots between instruments and timeframes.
+ */
+const MEMORY_CACHE_MAX_ENTRIES = 48;
+
+// In-Memory Fast Cache Map. Bounded: an unbounded map here grew for the lifetime
+// of the process, and the same candles are additionally held client-side in
+// milliseconds, so a session's data exists twice at once in two representations.
+const memoryCache = createBoundedCache<any>(MEMORY_CACHE_MAX_ENTRIES);
 
 /**
  * Bumped whenever a change alters how a payload is produced, so cached entries
@@ -255,8 +274,11 @@ const s1BaseInflight = new Map<string, Promise<{ candles: SanitizedCandle[] }>>(
 // so a simple retry recovers reliably.
 const RETRY_ATTEMPTS = 3;
 
-// s1 base disk-cache hygiene: keep the newest ~512MB of processed s1 files.
+// Disk-cache hygiene. s1 (tick) payloads are far larger per file than everything
+// else, so they get their own budget — otherwise a tick cache would evict every
+// other payload. The non-s1 budget previously did not exist at all.
 const S1_MAX_TOTAL_BYTES = 512 * 1024 * 1024;
+const PAYLOAD_MAX_TOTAL_BYTES = 768 * 1024 * 1024;
 
 const NETWORK_ERROR_CODES = new Set([
   "EADDRNOTAVAIL",
@@ -571,12 +593,12 @@ function loadS1Base(
       endTime: new Date(candles[candles.length - 1].time * 1000).toISOString(),
       candles,
     };
-    try {
-      fs.writeFileSync(s1Path, JSON.stringify(s1Payload));
-      enforceS1CacheLimit();
-    } catch {
-      console.warn(`[Dukascopy API] Could not write s1 base cache for ${baseKey}`);
-    }
+    // Written asynchronously and not awaited: a multi-megabyte `JSON.stringify`
+    // plus a synchronous write is charged to the event loop, and this is on the
+    // request path. A failed cache write costs a re-download later, never
+    // correctness, so it must not delay the response.
+    writeCacheFile(s1Path, s1Payload, `s1 base cache for ${baseKey}`);
+    maybeEnforceCacheLimits();
 
     return { candles };
   })().finally(() => {
@@ -587,43 +609,28 @@ function loadS1Base(
   return promise;
 }
 
-// Simple LRU: when total processed *s1.json size exceeds the cap, delete the
-// oldest files until back under it.
-function enforceS1CacheLimit(maxBytes = S1_MAX_TOTAL_BYTES): void {
-  try {
-    const files = fs
-      .readdirSync(cacheDir)
-      .filter((f) => f.startsWith("processed_") && f.endsWith("_s1.json"))
-      .map((f) => {
-        const p = path.join(cacheDir, f);
-        const stat = fs.statSync(p);
-        return { name: f, path: p, mtimeMs: stat.mtimeMs, size: stat.size };
-      });
-    const totalBytes = files.reduce((sum, f) => sum + f.size, 0);
-    if (totalBytes <= maxBytes) return;
-    files.sort((a, b) => a.mtimeMs - b.mtimeMs);
-    let reclaimed = 0;
-    for (const f of files) {
-      if (totalBytes - reclaimed <= maxBytes) break;
-      try {
-        fs.unlinkSync(f.path);
-        reclaimed += f.size;
-        console.log(
-          `[Dukascopy API] Removed oldest s1 cache file ${f.name} (total was ${(totalBytes / 1024 / 1024).toFixed(1)}MB)`
-        );
-      } catch {
-        // ignore files that disappear between listing and deletion
-      }
-    }
-  } catch {
-    // ignore listing errors
-  }
+/**
+ * Throttles the cache sweep. It is a full `readdirSync` plus a `statSync` per
+ * file, which is real work to do on every single download; once a minute is far
+ * more often than the budgets need.
+ */
+let lastCacheSweepMs = 0;
+function maybeEnforceCacheLimits(): void {
+  const now = Date.now();
+  if (now - lastCacheSweepMs < 60_000) return;
+  lastCacheSweepMs = now;
+  enforceCacheLimits({
+    cacheDir,
+    pipelineVersion: CACHE_PIPELINE_VERSION,
+    s1MaxBytes: S1_MAX_TOTAL_BYTES,
+    payloadMaxBytes: PAYLOAD_MAX_TOTAL_BYTES,
+    log: (m) => console.log(`[Dukascopy API] ${m}`),
+  });
 }
 
 /**
  * Detects a cached payload that was written by a download which silently lost
  * part of its range.
- *
  * Freshly-built payloads are already checked before being cached, but files
  * written by earlier versions of this endpoint predate that check â€” so a
  * truncated H1/H4 series produced before the fix would otherwise be served
@@ -872,11 +879,11 @@ app.post("/api/download", async (req, res) => {
         );
       } else {
         memoryCache.set(cacheKey, payload);
-        try {
-          fs.writeFileSync(processedJsonPath, JSON.stringify(payload));
-        } catch {
-          console.warn(`[Dukascopy API] Could not write disk cache for ${cacheKey}`);
-        }
+        writeCacheFile(processedJsonPath, payload, `disk cache for ${cacheKey}`);
+        // Sweeping on every write is a full directory listing, so it runs at most
+        // once a minute; doing it inline added latency to the response for a
+        // background housekeeping task.
+        maybeEnforceCacheLimits();
       }
 
       return { payload };
@@ -929,3 +936,5 @@ async function startServer() {
 }
 
 startServer();
+
+

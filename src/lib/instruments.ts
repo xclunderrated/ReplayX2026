@@ -1,4 +1,4 @@
-﻿/**
+/**
  * The instrument catalogue, split out of `server.ts` so it can be imported and
  * tested.
  *
