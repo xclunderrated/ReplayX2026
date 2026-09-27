@@ -1,15 +1,20 @@
-import { DownloadResponse, InstrumentMeta } from "../types";
+/**
+ * Legacy market-data entry point.
+ *
+ * `src/services/marketdata/api.ts` is the real client. This module used to hold
+ * a second, independent implementation with its own memory cache and no request
+ * timeout, so the same range could be downloaded and stored twice (once per
+ * cache) and a stalled request would hang forever instead of failing after 45s.
+ * It is now a thin adapter over the shared client, kept only because
+ * `usePaneCandleData` consumes the raw `DownloadResponse` shape (candles in
+ * seconds) rather than the converted `Candle[]` the rest of the app uses.
+ */
 
-const clientMemoryCache = new Map<string, DownloadResponse>();
+import { downloadMarketDataWithMeta, clearClientCache, fetchInstruments } from './marketdata';
+import type { DownloadResponse, InstrumentMeta } from './marketdata/types';
 
-export async function fetchInstruments(): Promise<InstrumentMeta[]> {
-  const res = await fetch("/api/instruments");
-  if (!res.ok) {
-    throw new Error("Failed to load supported instruments from server.");
-  }
-  const data = await res.json();
-  return data.instruments || [];
-}
+export { clearClientCache, fetchInstruments };
+export type { DownloadResponse, InstrumentMeta };
 
 export async function downloadMarketData(
   instrument: string,
@@ -17,33 +22,6 @@ export async function downloadMarketData(
   toDate: string,
   priceType: "bid" | "ask" = "bid"
 ): Promise<DownloadResponse> {
-  const cacheKey = `${instrument}_${fromDate}_${toDate}_${priceType}`;
-
-  // Check client-side memory cache (0ms instant response)
-  if (clientMemoryCache.has(cacheKey)) {
-    return clientMemoryCache.get(cacheKey)!;
-  }
-
-  const res = await fetch("/api/download", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      instrument,
-      fromDate,
-      toDate,
-      priceType,
-    }),
-  });
-
-  const data = await res.json();
-
-  if (!res.ok || data.error) {
-    throw new Error(data.error || "Failed to download market data from Dukascopy.");
-  }
-
-  const result = data as DownloadResponse;
-  clientMemoryCache.set(cacheKey, result);
-  return result;
+  const { meta } = await downloadMarketDataWithMeta(instrument, fromDate, toDate, priceType);
+  return meta;
 }

@@ -9,13 +9,37 @@ interface InstrumentsResponse {
 
 const clientMemoryCache = new Map<string, DownloadResponse>();
 
-async function fetchWithTimeout(url: string, init?: RequestInit, timeoutMs: number = REQUEST_TIMEOUT_MS): Promise<Response> {
+export interface MarketDataRequestOptions {
+  /**
+   * Caller-owned cancellation. The session loader creates one per load so that
+   * switching sessions (or pressing Cancel) stops the work; previously its
+   * AbortController was never handed to `fetch`, so the request ran to
+   * completion regardless.
+   */
+  signal?: AbortSignal;
+}
+
+async function fetchWithTimeout(
+  url: string,
+  init?: RequestInit,
+  timeoutMs: number = REQUEST_TIMEOUT_MS,
+  externalSignal?: AbortSignal,
+): Promise<Response> {
   const controller = new AbortController();
   let timedOut = false;
   const timer = setTimeout(() => {
     timedOut = true;
     controller.abort();
   }, timeoutMs);
+
+  // Forward the caller's cancellation onto our timeout controller so a single
+  // signal reaches fetch, and drop the listener once we are done.
+  const forwardAbort = () => controller.abort();
+  if (externalSignal) {
+    if (externalSignal.aborted) controller.abort();
+    else externalSignal.addEventListener('abort', forwardAbort, { once: true });
+  }
+
   try {
     return await fetch(url, { ...init, signal: controller.signal });
   } catch (error) {
@@ -25,6 +49,7 @@ async function fetchWithTimeout(url: string, init?: RequestInit, timeoutMs: numb
     throw error;
   } finally {
     clearTimeout(timer);
+    if (externalSignal) externalSignal.removeEventListener('abort', forwardAbort);
   }
 }
 
@@ -39,8 +64,8 @@ function toCandle(item: DownloadResponse['candles'][0]): Candle {
   };
 }
 
-export async function fetchInstruments(): Promise<InstrumentMeta[]> {
-  const res = await fetchWithTimeout(`${API_BASE}/instruments`);
+export async function fetchInstruments(signal?: AbortSignal): Promise<InstrumentMeta[]> {
+  const res = await fetchWithTimeout(`${API_BASE}/instruments`, undefined, REQUEST_TIMEOUT_MS, signal);
   if (!res.ok) {
     throw new Error('Failed to load supported instruments from server.');
   }
@@ -53,29 +78,12 @@ export async function downloadMarketData(
   fromDate: string,
   toDate: string,
   priceType: 'bid' | 'ask' = 'bid',
-  timeframe?: string
+  timeframe?: string,
+  options?: MarketDataRequestOptions,
 ): Promise<Candle[]> {
-  const cacheKey = `${instrument}_${fromDate}_${toDate}_${priceType}_${timeframe ?? 'm1'}`;
-
-  if (clientMemoryCache.has(cacheKey)) {
-    const cached = clientMemoryCache.get(cacheKey)!;
-    return cached.candles.map(toCandle);
-  }
-
-  const res = await fetchWithTimeout(`${API_BASE}/download`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ instrument, fromDate, toDate, priceType, timeframe }),
-  });
-
-  const data: DownloadResponse = await res.json();
-
-  if (!res.ok || data.error) {
-    throw new Error(data.error || 'Failed to download market data from Dukascopy.');
-  }
-
-  const candles = data.candles.map(toCandle);
-  clientMemoryCache.set(cacheKey, data);
+  const { candles } = await downloadMarketDataWithMeta(
+    instrument, fromDate, toDate, priceType, timeframe, options,
+  );
   return candles;
 }
 
@@ -84,7 +92,8 @@ export async function downloadMarketDataWithMeta(
   fromDate: string,
   toDate: string,
   priceType: 'bid' | 'ask' = 'bid',
-  timeframe?: string
+  timeframe?: string,
+  options?: MarketDataRequestOptions,
 ): Promise<{ candles: Candle[]; meta: DownloadResponse }> {
   const cacheKey = `${instrument}_${fromDate}_${toDate}_${priceType}_${timeframe ?? 'm1'}`;
 
@@ -93,11 +102,16 @@ export async function downloadMarketDataWithMeta(
     return { candles: cached.candles.map(toCandle), meta: cached };
   }
 
-  const res = await fetchWithTimeout(`${API_BASE}/download`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ instrument, fromDate, toDate, priceType, timeframe }),
-  });
+  const res = await fetchWithTimeout(
+    `${API_BASE}/download`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ instrument, fromDate, toDate, priceType, timeframe }),
+    },
+    REQUEST_TIMEOUT_MS,
+    options?.signal,
+  );
 
   const data: DownloadResponse = await res.json();
 
@@ -105,9 +119,16 @@ export async function downloadMarketDataWithMeta(
     throw new Error(data.error || 'Failed to download market data from Dukascopy.');
   }
 
-  const candles = data.candles.map(toCandle);
-  clientMemoryCache.set(cacheKey, data);
-  return { candles, meta: data };
+  // A `partial` payload is intentionally not cached client-side either: the
+  // server already declined to persist it, and caching it here would restore the
+  // exact "truncated data becomes permanent" problem the guard exists to stop.
+  if (!data.partial) {
+    const candles = data.candles.map(toCandle);
+    clientMemoryCache.set(cacheKey, data);
+    return { candles, meta: data };
+  }
+
+  return { candles: data.candles.map(toCandle), meta: data };
 }
 
 export function clearClientCache(): void {

@@ -117,8 +117,9 @@ export function aggregateCandles(
   let currentBucketTime: number | null = null;
   let currentCandle: OHLCCandle | null = null;
 
-  // Monday offset for weekly candles (259200 seconds = 3 days, Thursday Jan 1 1970 to Monday)
-  const mondayOffset = 259200;
+  // Monday offset for weekly candles (345600 seconds = 4 days, Thursday Jan 1
+  // 1970 -> Monday Jan 5 1970)
+  const mondayOffset = 345600;
 
   for (let i = 0; i <= limitIndex; i++) {
     const m1 = baseM1Candles[i];

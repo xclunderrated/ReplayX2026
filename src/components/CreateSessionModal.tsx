@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSimulatorStore } from '../store/useSimulatorStore';
-import { X, Search, Check } from 'lucide-react';
+import { X, Search, Check, AlertTriangle } from 'lucide-react';
 import { fetchInstruments } from '../services/marketdata';
+import { getMaxRangeDaysForTimeframe } from '../lib/timeframe';
 
 interface CreateSessionModalProps {
   isOpen: boolean;
@@ -38,12 +39,60 @@ const DUKASCOPY_SYMBOLS_FALLBACK: InstrumentOption[] = [
   { value: 'usa500idxusd', label: 'USA500.IDX/USD', category: 'Indices', description: 'S&P 500 Index' },
 ];
 
+/** Timeframes a new session can start on, mirroring the in-session switcher. */
+const SESSION_TIMEFRAMES: { value: string; label: string }[] = [
+  { value: 'tick', label: 'Tick' },
+  { value: 's5', label: '5s' },
+  { value: 's15', label: '15s' },
+  { value: 's30', label: '30s' },
+  { value: 'm1', label: '1m' },
+  { value: 'm5', label: '5m' },
+  { value: 'm15', label: '15m' },
+  { value: 'm30', label: '30m' },
+  { value: 'h1', label: '1H' },
+  { value: 'h4', label: '4H' },
+  { value: 'd1', label: '1D' },
+  { value: 'mn1', label: '1M' },
+];
+
+/**
+ * Formats a Date as `YYYY-MM-DD` from its *local* calendar fields.
+ *
+ * `toISOString()` converts to UTC first, which rolls the date backwards for
+ * anyone east of Greenwich — local midnight on the 27th is 22:00 on the 26th in
+ * London, so the "ends yesterday" default was really ending the day before
+ * yesterday. Reading local fields keeps the label meaning what it says.
+ */
+function formatLocalISODate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/** Parses a `YYYY-MM-DD` field value as local midnight (avoids the UTC shift). */
+function parseLocalISODate(text: string): Date | null {
+  const match = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  return Number.isFinite(date.getTime()) ? date : null;
+}
+
+/** Whole days between two `YYYY-MM-DD` values, inclusive of the end day. */
+function countDaysInclusive(startText: string, endText: string): number | null {
+  const start = parseLocalISODate(startText);
+  const end = parseLocalISODate(endText);
+  if (!start || !end) return null;
+  return Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1;
+}
+
 
 export const CreateSessionModal: React.FC<CreateSessionModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const { createSession } = useSimulatorStore();
   const [name, setName] = useState('');
   const [balance, setBalance] = useState('10000');
   const [instrument, setInstrument] = useState('eurusd');
+  const [timeframe, setTimeframe] = useState('m15');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
@@ -56,15 +105,16 @@ export const CreateSessionModal: React.FC<CreateSessionModalProps> = ({ isOpen, 
   useEffect(() => {
     if (!isOpen) return;
 
-    // Default date window: 30 days ago until yesterday
+    // Default date window: 30 days ago until yesterday, in the user's local
+    // calendar. Both are built from calendar fields rather than by subtracting
+    // milliseconds, so a DST transition inside the window cannot shift the
+    // resulting day.
     const now = new Date();
     const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
-    const start = new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
-    const defaultEndStr = end.toISOString().split('T')[0];
-    const defaultStartStr = start.toISOString().split('T')[0];
+    const start = new Date(end.getFullYear(), end.getMonth(), end.getDate() - 30);
 
-    if (!startDate) setStartDate(defaultStartStr);
-    if (!endDate) setEndDate(defaultEndStr);
+    if (!startDate) setStartDate(formatLocalISODate(start));
+    if (!endDate) setEndDate(formatLocalISODate(end));
 
     let isMounted = true;
     setIsLoadingInstruments(true);
@@ -124,6 +174,7 @@ export const CreateSessionModal: React.FC<CreateSessionModalProps> = ({ isOpen, 
     setName('');
     setBalance('10000');
     setInstrument('eurusd');
+    setTimeframe('m15');
     setStartDate('');
     setEndDate('');
     setSearchQuery('');
@@ -134,11 +185,30 @@ export const CreateSessionModal: React.FC<CreateSessionModalProps> = ({ isOpen, 
   const parsedBalance = Number.parseFloat(balance);
   let validationError: string | null = null;
 
+  const startTs = parseLocalISODate(startDate)?.getTime();
+  const endTs = parseLocalISODate(endDate)?.getTime();
+
   if (!Number.isFinite(parsedBalance) || parsedBalance <= 0) {
     validationError = 'Enter a valid starting balance greater than zero.';
-  } else if (startDate && endDate && new Date(endDate).getTime() < new Date(startDate).getTime()) {
+  } else if (startTs !== undefined && endTs !== undefined && endTs < startTs) {
     validationError = 'End date must be the same day or later than the start date.';
   }
+
+  // Sub-minute timeframes are backed by real tick data, which the server caps
+  // per request. The loader narrows the range to the cap rather than failing, so
+  // without this the user would get a 30-day session that silently holds 3 days
+  // of data. Warn here, at the point where it can still be fixed.
+  const maxRangeDays = getMaxRangeDaysForTimeframe(timeframe);
+  const selectedDays = countDaysInclusive(startDate, endDate);
+  const rangeWarning = (
+    Number.isFinite(maxRangeDays) &&
+    selectedDays !== null &&
+    selectedDays > maxRangeDays
+  )
+    ? `${timeframe.toUpperCase()} data is limited to ${maxRangeDays} days per request. ` +
+      `This ${selectedDays}-day session will load only the most recent ${maxRangeDays} days — ` +
+      `shorten the range to match.`
+    : null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -148,7 +218,7 @@ export const CreateSessionModal: React.FC<CreateSessionModalProps> = ({ isOpen, 
       name: name.trim() || 'New Session',
       initialBalance: parsedBalance,
       instrument,
-      timeframe: 'm15',
+      timeframe,
       startDate,
       endDate,
       timeframePanes: [],
@@ -160,12 +230,28 @@ export const CreateSessionModal: React.FC<CreateSessionModalProps> = ({ isOpen, 
   };
 
   const addTime = (type: 'day' | 'week' | 'month') => {
-    if (!startDate) return;
-    const date = new Date(startDate);
+    const start = parseLocalISODate(startDate);
+    if (!start) return;
+
+    // Extend the existing end date rather than restarting from the start date,
+    // so "+1W" on the default 30-day window grows it to 37 days instead of
+    // silently shrinking it back to 7.
+    const currentEnd = parseLocalISODate(endDate);
+    const base = currentEnd && currentEnd.getTime() >= start.getTime() ? currentEnd : start;
+    const date = new Date(base.getTime());
+
     if (type === 'day') date.setDate(date.getDate() + 1);
     if (type === 'week') date.setDate(date.getDate() + 7);
-    if (type === 'month') date.setMonth(date.getMonth() + 1);
-    setEndDate(date.toISOString().split('T')[0]);
+    if (type === 'month') {
+      // setMonth() overflows on short months (Jan 31 + 1 month lands on Mar 3),
+      // so clamp the day to the last day of the target month first.
+      const targetMonth = date.getMonth() + 1;
+      const lastDayOfTargetMonth = new Date(date.getFullYear(), targetMonth + 1, 0).getDate();
+      date.setDate(Math.min(date.getDate(), lastDayOfTargetMonth));
+      date.setMonth(targetMonth);
+    }
+
+    setEndDate(formatLocalISODate(date));
   };
 
   return (
@@ -227,6 +313,26 @@ export const CreateSessionModal: React.FC<CreateSessionModalProps> = ({ isOpen, 
             </button>
           </div>
 
+          <div>
+            <label className="mb-1.5 block text-[11px] font-medium text-[var(--text-secondary)] uppercase tracking-wider">Timeframe</label>
+            <div className="flex flex-wrap gap-1.5">
+              {SESSION_TIMEFRAMES.map((tf) => (
+                <button
+                  key={tf.value}
+                  type="button"
+                  onClick={() => setTimeframe(tf.value)}
+                  className={`rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${
+                    timeframe === tf.value
+                      ? 'border-[var(--accent-1)]/40 bg-[var(--accent-1)]/10 text-[var(--accent-1)]'
+                      : 'border-[var(--border-soft)] bg-[var(--app-bg)] text-[var(--text-secondary)] hover:border-[var(--accent-1)]/40 hover:text-[var(--text-primary)]'
+                  }`}
+                >
+                  {tf.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="mb-1.5 block text-[11px] font-medium text-[var(--text-secondary)] uppercase tracking-wider">Start Date</label>
@@ -263,6 +369,13 @@ export const CreateSessionModal: React.FC<CreateSessionModalProps> = ({ isOpen, 
               />
             </div>
           </div>
+
+          {rangeWarning && (
+            <div className="flex items-start gap-2 rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-3">
+              <AlertTriangle size={14} className="mt-0.5 flex-shrink-0 text-amber-400" />
+              <p className="text-[11px] font-medium leading-relaxed text-amber-100">{rangeWarning}</p>
+            </div>
+          )}
 
           {validationError && (
             <div className="rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-[11px] font-medium text-rose-200">

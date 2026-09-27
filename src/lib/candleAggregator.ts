@@ -7,7 +7,14 @@ export interface OHLC {
   volume: number;
 }
 
-export const WEEKLY_MONDAY_OFFSET_SEC = 259200;
+/**
+ * Seconds to add to the Unix epoch to land on a Monday.
+ *
+ * Jan 1 1970 (the epoch) was a Thursday, so 4 days — not 3 — puts the anchor on
+ * a Monday. The previous value of 259200 (3 days) landed on Sunday, so weekly
+ * candles were bucketed Sunday-to-Saturday despite the name.
+ */
+export const WEEKLY_MONDAY_OFFSET_SEC = 4 * 86400;
 
 export function aggregateCandlesByPeriod(sortedInput: OHLC[], periodSec: number, weekly = false): OHLC[] {
   const aggregated: OHLC[] = [];

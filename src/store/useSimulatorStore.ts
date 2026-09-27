@@ -1203,6 +1203,7 @@ export const useSimulatorStore = create<SimulatorState>()(
                 progress: 0,
                 error: null,
                 userMessage: null,
+                dataWarning: null,
                 activeLoadKind: null,
               },
             };
@@ -1217,6 +1218,24 @@ export const useSimulatorStore = create<SimulatorState>()(
 
       createSession: (sessionData) => {
         const id = crypto.randomUUID();
+        const sessionTimeframe = sessionData.timeframe || 'm5';
+
+        // Defaults live in `??` expressions rather than as literals after the
+        // spread. Previously every one of these keys was hardcoded *after*
+        // `...sessionData`, so a caller that supplied e.g. `mtfLayout` or
+        // `timeframePanes` had it silently thrown away — and all three call sites
+        // dutifully passed fields that could never take effect.
+        const defaultPanes: ChartPaneConfig[] = [
+          {
+            id: 'pane-0',
+            timeframe: sessionTimeframe as Timeframe,
+            isLinkedToSessionSymbol: true,
+            indicatorsEnabled: true,
+            drawingFilter: 'all',
+          },
+        ];
+        const multiChartPanes = sessionData.multiChartPanes?.length ? sessionData.multiChartPanes : defaultPanes;
+
         const newSession: Session = {
           ...sessionData,
           id,
@@ -1229,33 +1248,28 @@ export const useSimulatorStore = create<SimulatorState>()(
           indicators: [],
           journalEntries: [],
           dataState: createEmptySessionDataState(),
-          checklistCheckedItems: {},
-          timeframePanes: [],
-          mtfLayout: 'horizontal',
-          multiChartLayout: 'single',
-          multiChartPanes: [
-            {
-              id: 'pane-0',
-              timeframe: (sessionData.timeframe as Timeframe) || 'm5',
-              isLinkedToSessionSymbol: true,
-              indicatorsEnabled: true,
-              drawingFilter: 'all',
-            },
-          ],
-          activeChartPaneId: 'pane-0',
-          maximizedChartPaneId: null,
-          syncCrosshair: true,
-          syncTimeRange: true,
-          syncDrawings: true,
-          syncSymbol: true,
-          timeframeVersion: 0,
+          // The session is created with no candles; `sourceTimeframe` records
+          // what the first load will fetch, so it tracks `timeframe` here.
+          sourceTimeframe: sessionData.sourceTimeframe ?? sessionData.timeframe,
+          checklistCheckedItems: sessionData.checklistCheckedItems ?? {},
+          timeframePanes: sessionData.timeframePanes ?? [],
+          mtfLayout: sessionData.mtfLayout ?? 'horizontal',
+          multiChartLayout: sessionData.multiChartLayout ?? 'single',
+          multiChartPanes,
+          activeChartPaneId: sessionData.activeChartPaneId ?? multiChartPanes[0]?.id,
+          maximizedChartPaneId: sessionData.maximizedChartPaneId ?? null,
+          syncCrosshair: sessionData.syncCrosshair ?? true,
+          syncTimeRange: sessionData.syncTimeRange ?? true,
+          syncDrawings: sessionData.syncDrawings ?? true,
+          syncSymbol: sessionData.syncSymbol ?? true,
+          timeframeVersion: sessionData.timeframeVersion ?? 0,
         };
-        
+
         set(state => ({
           sessions: [...state.sessions, newSession],
           currentSessionId: id
         }));
-        
+
         return id;
       },
       
@@ -1454,6 +1468,7 @@ export const useSimulatorStore = create<SimulatorState>()(
                 isViewportLoading: false,
                 progress: 100,
                 error: null,
+                dataWarning: null,
                 activeLoadKind: null,
               });
             }
@@ -1480,6 +1495,7 @@ export const useSimulatorStore = create<SimulatorState>()(
               isViewportLoading: false,
               progress: 0,
               error: null,
+              dataWarning: null,
               activeLoadKind: 'switch',
               loadedFromTs: undefined,
               loadedToTs: undefined,
@@ -1599,6 +1615,7 @@ export const useSimulatorStore = create<SimulatorState>()(
               progress: 0,
               error: null,
               userMessage: null,
+              dataWarning: null,
               activeLoadKind: null,
             },
           };

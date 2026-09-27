@@ -5,7 +5,7 @@ export type TimeframeId =
   | '5s' | '15s' | '30s' 
   | '1m' | '5m' | '15m' | '30m' 
   | '1h' | '4h' 
-  | '1D' | '1W';
+  | '1D' | '1W' | '1M';
 
 export const TIMEFRAMES: { id: TimeframeId; label: string; seconds: number }[] = [
   { id: '5s', label: '5s', seconds: 5 },
@@ -19,6 +19,10 @@ export const TIMEFRAMES: { id: TimeframeId; label: string; seconds: number }[] =
   { id: '4h', label: '4h', seconds: 14400 },
   { id: '1D', label: '1D', seconds: 86400 },
   { id: '1W', label: '1W', seconds: 604800 },
+  // Nominal month length. Monthly candles are always fetched natively from
+  // Dukascopy (never aggregated), so this value is only used for ordering and
+  // comparison — 30 days matches APPROX_MONTH_MS elsewhere in the codebase.
+  { id: '1M', label: '1M', seconds: 2592000 },
 ];
 
 export const TIMEFRAME_MAP: Record<string, TimeframeId> = {
@@ -34,7 +38,12 @@ export const TIMEFRAME_MAP: Record<string, TimeframeId> = {
   h1: '1h',
   h4: '4h',
   d1: '1D',
-  mn1: '1W',
+  // `mn1` is Dukascopy's *monthly* feed and is a distinct timeframe from weekly.
+  // It used to alias to '1W' here, which made every duration calculation treat
+  // monthly bars as 7-day bars. '1M' is now its own identity; the wire format
+  // stays 'mn1' because the server lowercases timeframes and '1M' would
+  // otherwise collapse onto '1m' (one minute).
+  mn1: '1M',
 
   // Standard TimeframeId representations
   '5s': '5s',
@@ -50,6 +59,7 @@ export const TIMEFRAME_MAP: Record<string, TimeframeId> = {
   '1D': '1D',
   '1w': '1W',
   '1W': '1W',
+  '1M': '1M',
 };
 
 export const REVERSE_TIMEFRAME_MAP: Record<TimeframeId, string> = {
@@ -63,7 +73,8 @@ export const REVERSE_TIMEFRAME_MAP: Record<TimeframeId, string> = {
   '1h': 'h1',
   '4h': 'h4',
   '1D': 'd1',
-  '1W': 'mn1',
+  '1W': '1W',
+  '1M': 'mn1',
 };
 
 export function auraTimeframeToDukascopy(tf: string): TimeframeId {
@@ -91,7 +102,8 @@ export function dukascopyTimeframeToAura(tf: TimeframeId): string {
 
 export function getBaseTimeframe(tf: string): string {
   if (tf === 'tick') return 'tick';
-  if (tf === 'mn1' || tf === '1W') return 'mn1';
+  if (tf === 'mn1' || tf === '1M') return 'mn1';
+  if (tf === '1W') return 'd1';
   if (tf.startsWith('s') || tf === '5s' || tf === '15s' || tf === '30s') return 's1';
   if (tf.startsWith('m') || tf === '1m' || tf === '5m' || tf === '15m' || tf === '30m') return 'm1';
   if (tf === 'h1' || tf === 'h4' || tf === '1h' || tf === '4h') return 'h1';
@@ -455,10 +467,17 @@ export function mergeCandles(existing: Candle[], incoming: Candle[]): Candle[] {
 export function getBucketStart(timestamp: number, timeframe: string): number {
   const tf = auraTimeframeToDukascopy(timeframe);
   const periodSec = getTimeframeSeconds(tf);
-  
+
+  // Always returns milliseconds, matching candle timestamps. The weekly branch
+  // used to return seconds, so a '1W' bucket start came back 1000x too small and
+  // landed in 1970 when compared against a real candle timestamp.
   if (tf === '1W') {
-    return Math.floor((timestamp / 1000 - WEEKLY_MONDAY_OFFSET_SEC) / periodSec) * periodSec + WEEKLY_MONDAY_OFFSET_SEC;
+    return (
+      (Math.floor((timestamp / 1000 - WEEKLY_MONDAY_OFFSET_SEC) / periodSec) * periodSec +
+        WEEKLY_MONDAY_OFFSET_SEC) *
+      1000
+    );
   }
-  
+
   return Math.floor(timestamp / 1000 / periodSec) * periodSec * 1000;
 }

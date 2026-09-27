@@ -8,7 +8,12 @@ import {
   getBaseTimeframe,
   getAggregationSource,
   getMaxRangeDaysForTimeframe,
+  getBucketStart,
+  getTimeframeSeconds,
+  auraTimeframeToDukascopy,
+  dukascopyTimeframeToAura,
 } from '../src/lib/timeframe';
+import { WEEKLY_MONDAY_OFFSET_SEC } from '../src/lib/candleAggregator';
 
 test('sortAndDeduplicateCandles drops corrupted candles and preserves identical overlap once', () => {
   const duplicate = { timestamp: 1_000, open: 1.1, high: 1.2, low: 1.0, close: 1.15, volume: 10 };
@@ -80,6 +85,35 @@ test('getBaseTimeframe returns the Dukascopy-native base to aggregate from per t
   // Days / months are fetched at their own native timeframe.
   assert.equal(getBaseTimeframe('d1'), 'd1');
   assert.equal(getBaseTimeframe('mn1'), 'mn1');
+  // Weekly aggregates from daily; it is not a monthly feed.
+  assert.equal(getBaseTimeframe('1W'), 'd1');
+});
+
+test('monthly is a distinct timeframe from weekly', () => {
+  // 'mn1' is Dukascopy's *monthly* feed. It used to alias to '1W' in
+  // TIMEFRAME_MAP, so every duration calculation treated monthly bars as 7-day
+  // bars while the server returned real monthly data.
+  assert.notEqual(auraTimeframeToDukascopy('mn1'), auraTimeframeToDukascopy('1W'));
+  assert.equal(getTimeframeSeconds('mn1'), 30 * 86_400);
+  assert.equal(getTimeframeSeconds('1W'), 7 * 86_400);
+  assert.equal(auraTimeframeToDukascopy('mn1'), '1M');
+  assert.equal(auraTimeframeToDukascopy('1M'), '1M');
+
+  // Monthly is still the coarsest timeframe, so ordering holds.
+  assert.ok(getTimeframeSeconds('1W') < getTimeframeSeconds('mn1'));
+  assert.equal(canDeriveTimeframe('d1', '1W'), true);
+  assert.equal(canDeriveTimeframe('1W', 'mn1'), true);
+  assert.equal(canDeriveTimeframe('mn1', '1W'), false);
+});
+
+test('the wire format for monthly stays mn1, not 1M', () => {
+  // The server lowercases timeframes before matching, so sending "1M" would
+  // collapse onto "1m" (one minute). The reverse map must emit "mn1".
+  assert.equal(dukascopyTimeframeToAura('1M'), 'mn1');
+  assert.equal(dukascopyTimeframeToAura('1W'), '1W');
+  assert.equal(dukascopyTimeframeToAura('1h'), 'h1');
+  assert.equal(dukascopyTimeframeToAura('4h'), 'h4');
+  assert.equal(dukascopyTimeframeToAura('15m'), 'm15');
 });
 
 test('getAggregationSource mirrors getBaseTimeframe', () => {
@@ -100,6 +134,86 @@ test('getMaxRangeDaysForTimeframe caps only sub-minute timeframes', () => {
   assert.equal(getMaxRangeDaysForTimeframe('m1'), Infinity);
   assert.equal(getMaxRangeDaysForTimeframe('h1'), Infinity);
   assert.equal(getMaxRangeDaysForTimeframe('1W'), Infinity);
+});
+
+test('weekly buckets are anchored on Monday', () => {
+  // The offset used to be 259200s (3 days). Jan 1 1970 was a Thursday, so 3
+  // days lands on Sunday and weekly candles were bucketed Sun-Sat despite the
+  // constant being named WEEKLY_MONDAY_OFFSET_SEC.
+  assert.equal(new Date(0).getUTCDay(), 4, 'epoch was a Thursday');
+  assert.equal(new Date(WEEKLY_MONDAY_OFFSET_SEC * 1000).getUTCDay(), 1, 'anchor must be a Monday');
+  assert.equal(WEEKLY_MONDAY_OFFSET_SEC, 4 * 86_400);
+
+  // A Monday belongs to its own bucket; the Sunday before it belongs to the
+  // previous week.
+  const monday = Date.UTC(2024, 0, 1, 12, 0, 0);
+  const sundayBefore = Date.UTC(2023, 11, 31, 12, 0, 0);
+  assert.equal(new Date(getBucketStart(monday, '1W')).getUTCDay(), 1);
+  assert.equal(new Date(getBucketStart(monday, '1W')).toISOString().slice(0, 10), '2024-01-01');
+  assert.equal(new Date(getBucketStart(sundayBefore, '1W')).getUTCDay(), 1);
+  assert.equal(new Date(getBucketStart(sundayBefore, '1W')).toISOString().slice(0, 10), '2023-12-25');
+
+  // Every day of an ISO week maps to that week's Monday.
+  for (let i = 0; i < 7; i++) {
+    const ts = Date.UTC(2024, 0, 1 + i, 12, 0, 0);
+    assert.equal(
+      getBucketStart(ts, '1W'),
+      Date.UTC(2024, 0, 1, 0, 0, 0),
+      `2024-01-0${i + 1} must bucket to Monday 2024-01-01`,
+    );
+  }
+});
+
+test('weekly aggregation from daily produces complete Monday-anchored weeks', () => {
+  // Three trading weeks of daily bars, Mon 2024-01-01 .. Fri 2024-01-19.
+  // Weekends are omitted, as they are for a real FX feed.
+  const d1 = [];
+  let i = 0;
+  for (let day = 1; day <= 19; day++) {
+    const weekday = new Date(Date.UTC(2024, 0, day)).getUTCDay();
+    if (weekday === 0 || weekday === 6) continue;
+    d1.push({
+      timestamp: Date.UTC(2024, 0, day, 0, 0, 0),
+      open: 1.0 + i,
+      high: 2.0 + i,
+      low: 0.5 + i,
+      close: 1.5 + i,
+      volume: 10,
+    });
+    i++;
+  }
+  assert.equal(d1.length, 15, 'three five-day trading weeks');
+
+  const weekly = aggregateCandles(d1, '1W');
+  assert.equal(weekly.length, 3);
+  for (let w = 0; w < weekly.length; w++) {
+    assert.equal(
+      new Date(weekly[w].timestamp).getUTCDay(),
+      1,
+      `weekly candle ${w} must be stamped on a Monday`,
+    );
+  }
+
+  // First week: Jan 1 (Mon) .. Jan 5 (Fri) — 5 bars.
+  assert.equal(weekly[0].timestamp, Date.UTC(2024, 0, 1, 0, 0, 0));
+  assert.equal(weekly[0].open, 1.0, 'open is the first bar of the week');
+  assert.equal(weekly[0].close, 1.5 + 4, 'close is the last bar of the week');
+  assert.equal(weekly[0].high, Math.max(...d1.slice(0, 5).map((c) => c.high)));
+  assert.equal(weekly[0].low, Math.min(...d1.slice(0, 5).map((c) => c.low)));
+  assert.equal(weekly[0].volume, 50);
+
+  // Second week: Jan 8 .. Jan 12 — the weekend is skipped, not zero-filled.
+  // Five bars per week, so this bucket starts at index 5.
+  assert.equal(weekly[1].timestamp, Date.UTC(2024, 0, 8, 0, 0, 0));
+  assert.equal(weekly[1].open, d1[5].open);
+  assert.equal(weekly[1].close, d1[9].close);
+  assert.equal(weekly[1].volume, 50);
+
+  // Third (partial) week: Jan 15 .. Jan 19, i.e. indices 10..14.
+  assert.equal(weekly[2].timestamp, Date.UTC(2024, 0, 15, 0, 0, 0));
+  assert.equal(weekly[2].open, d1[10].open);
+  assert.equal(weekly[2].close, d1[14].close);
+  assert.equal(weekly[2].volume, 50);
 });
 
 test('aggregateCandles aggregates real s1 candles into true sub-minute candles', () => {

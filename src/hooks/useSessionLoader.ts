@@ -90,7 +90,6 @@ export function useSessionLoader() {
       }, session.id);
     }
   }, [patchDataState]);
-
   const loadSessionData = useCallback(async (session: Session) => {
     const targetTf: TimeframeId = auraTimeframeToDukascopy(session.timeframe);
     const isSubMinuteSession =
@@ -132,6 +131,13 @@ export function useSessionLoader() {
       ? Math.max(fullRangeStart, fullRangeEnd - maxRangeDays * DAY_MS)
       : fullRangeStart;
 
+    // Sub-minute sessions are silently narrowed to the cap. The chart still
+    // renders, so without this the user has no way to tell that a 30-day Tick
+    // session only contains 3 days of data.
+    const clamped = actualFromTs > fullRangeStart;
+    const requestedSpanDays = Math.round((fullRangeEnd - fullRangeStart) / DAY_MS);
+    const loadedSpanDays = Math.max(1, Math.round((fullRangeEnd - actualFromTs) / DAY_MS));
+
     patchDataState({
       absoluteFromTs: actualFromTs,
       absoluteToTs: fullRangeEnd,
@@ -142,6 +148,7 @@ export function useSessionLoader() {
       isViewportLoading: false,
       progress: 10,
       error: null,
+      dataWarning: null,
       userMessage: `Fetching data from Dukascopy...`,
       activeLoadKind: loadKind,
     }, session.id);
@@ -160,6 +167,7 @@ export function useSessionLoader() {
       let candlesForSession: Candle[] = [];
       let loadedSourceTf = '1m';
       let loadMessage = '';
+      let partialWarning: string | null = null;
 
       if (useRealSeconds) {
         setLoadingState({ isLoading: true, progress: 20, error: null, userMessage: `Fetching ${requestedTf} tick data from Dukascopy...` });
@@ -170,7 +178,8 @@ export function useSessionLoader() {
           fromDate,
           toDate,
           'bid',
-          requestedTf
+          requestedTf,
+          { signal: abort.signal },
         );
 
         if (abort.signal.aborted || activeLoadRef.current?.id !== loadId) return;
@@ -178,6 +187,7 @@ export function useSessionLoader() {
         candlesForSession = realCandles;
         loadedSourceTf = requestedTf;
         loadMessage = meta.cached ? 'Loaded from cache' : `Loaded ${realCandles.length} ${requestedTf} candles`;
+        partialWarning = meta.warning ?? null;
       } else if (isSubMinuteSession && useSyntheticSeconds) {
         setLoadingState({ isLoading: true, progress: 20, error: null, userMessage: 'Fetching 1m base data for synthetic sub-minute...' });
         patchDataState({ progress: 20, userMessage: 'Fetching 1m base data for synthetic sub-minute...' }, session.id);
@@ -187,7 +197,8 @@ export function useSessionLoader() {
           fromDate,
           toDate,
           'bid',
-          'm1'
+          'm1',
+          { signal: abort.signal },
         );
 
         if (abort.signal.aborted || activeLoadRef.current?.id !== loadId) return;
@@ -198,6 +209,7 @@ export function useSessionLoader() {
         candlesForSession = expandSubMinuteCandlesFromM1(m1Candles, targetTf);
         loadedSourceTf = 'm1';
         loadMessage = meta.cached ? 'Loaded from cache' : `Synthesized ${candlesForSession.length} ${targetTf} candles from 1m`;
+        partialWarning = meta.warning ?? null;
       } else {
         setLoadingState({ isLoading: true, progress: 20, error: null, userMessage: `Fetching ${session.timeframe} data from Dukascopy...` });
         patchDataState({ progress: 20, userMessage: `Fetching ${session.timeframe} data from Dukascopy...` }, session.id);
@@ -207,7 +219,8 @@ export function useSessionLoader() {
           fromDate,
           toDate,
           'bid',
-          requestedTf
+          requestedTf,
+          { signal: abort.signal },
         );
 
         if (abort.signal.aborted || activeLoadRef.current?.id !== loadId) return;
@@ -215,9 +228,23 @@ export function useSessionLoader() {
         candlesForSession = downloadedCandles;
         loadedSourceTf = session.timeframe;
         loadMessage = meta.cached ? 'Loaded from cache' : `Loaded ${downloadedCandles.length} ${session.timeframe} candles`;
+        partialWarning = meta.warning ?? null;
       }
 
       setData(candlesForSession, session.id);
+
+      // Both of these describe usable-but-not-what-you-asked-for data, so they
+      // are reported as a warning rather than an error: the chart is populated
+      // and the user can decide whether to narrow the session.
+      const warnings: string[] = [];
+      if (clamped) {
+        warnings.push(
+          `${session.timeframe} data is capped at ${maxRangeDays} day${maxRangeDays === 1 ? '' : 's'} per request, ` +
+          `so only the most recent ${loadedSpanDays} day${loadedSpanDays === 1 ? '' : 's'} of this ` +
+          `${requestedSpanDays}-day session were loaded. Shorten the session to match.`,
+        );
+      }
+      if (partialWarning) warnings.push(partialWarning);
 
       patchDataState({
         isLoading: false,
@@ -226,6 +253,7 @@ export function useSessionLoader() {
         progress: 100,
         error: candlesForSession.length === 0 ? 'No market data available for this period' : null,
         userMessage: loadMessage,
+        dataWarning: warnings.length > 0 ? warnings.join(' ') : null,
         activeLoadKind: null,
         loadedFromTs: candlesForSession[0]?.timestamp,
         loadedToTs: candlesForSession[candlesForSession.length - 1]?.timestamp,
@@ -249,6 +277,7 @@ export function useSessionLoader() {
         progress: 0,
         error: message,
         userMessage: null,
+        dataWarning: null,
         activeLoadKind: null,
       }, session.id);
 

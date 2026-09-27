@@ -107,6 +107,13 @@ export interface SessionDataState {
    * are handled by `error`.
    */
   userMessage: string | null;
+  /**
+   * A non-fatal problem noticed *after* a successful load, e.g. "only the last
+   * 3 days of this 30-day session could be loaded" or "the upstream download
+   * looks incomplete". Unlike `error` this does not block the chart: there is
+   * usable data, but the user should know it is not what they asked for.
+   */
+  dataWarning: string | null;
   activeLoadKind: SessionLoadKind;
   hasMoreBefore: boolean;
   hasMoreAfter: boolean;
@@ -158,6 +165,7 @@ export function createEmptySessionDataState(): SessionDataState {
     progress: 0,
     error: null,
     userMessage: null,
+    dataWarning: null,
     activeLoadKind: null,
     hasMoreBefore: false,
     hasMoreAfter: false,
@@ -202,6 +210,7 @@ function areDataStatesEqual(left?: SessionDataState, right?: SessionDataState): 
     && left.progress === right.progress
     && left.error === right.error
     && left.userMessage === right.userMessage
+    && left.dataWarning === right.dataWarning
     && left.activeLoadKind === right.activeLoadKind
     && left.hasMoreBefore === right.hasMoreBefore
     && left.hasMoreAfter === right.hasMoreAfter;

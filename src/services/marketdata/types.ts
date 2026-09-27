@@ -34,7 +34,7 @@ export interface Candle {
   volume: number;
 }
 
-export type TimeframeId = '5s' | '15s' | '30s' | '1m' | '5m' | '15m' | '30m' | '1h' | '4h' | '1D' | '1W';
+export type TimeframeId = '5s' | '15s' | '30s' | '1m' | '5m' | '15m' | '30m' | '1h' | '4h' | '1D' | '1W' | '1M';
 
 export interface DownloadResponse {
   instrument: InstrumentMeta;
@@ -46,6 +46,18 @@ export interface DownloadResponse {
   cached?: boolean;
   latencyMs?: number;
   error?: string;
+  /** The canonical day range the request was normalized to. */
+  requestedFrom?: string;
+  requestedTo?: string;
+  /**
+   * Set when the server detected a gap in the returned series too large to be a
+   * market closure, i.e. an upstream download failed part-way through. Such a
+   * result is returned (it is better than nothing) but is never cached, so a
+   * retry re-downloads instead of replaying the same truncated data.
+   */
+  partial?: boolean;
+  /** Human-readable explanation accompanying `partial`. */
+  warning?: string;
 }
 
 export interface FetchOptions {

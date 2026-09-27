@@ -5,8 +5,18 @@ import dns from "dns";
 import { createServer as createViteServer } from "vite";
 import { getHistoricalRates, Instrument } from "dukascopy-node";
 import { filterEventsByCurrencies, scrapeDayRange } from "./forexfactoryScraper";
-import { aggregateCandles, getMaxRangeDaysForTimeframe } from "./src/lib/timeframe";
+import { aggregateCandles } from "./src/lib/timeframe";
+import {
+  BadRequestError,
+  DUKASCOPY_ALIAS_MAP,
+  findCoverageProblem,
+  shiftDate,
+  validateDownloadRequest,
+  type DukascopyNativeTimeframe,
+} from "./src/lib/dukascopyRequest";
 import { registerDriveRoutes } from "./driveServerRoutes";
+
+export { DUKASCOPY_ALIAS_MAP };
 
 // Root fix for intermittent EADDRNOTAVAIL fetch failures: this machine has no
 // usable IPv6 route, and Dukascopy's DNS sometimes returns AAAA first. Forcing
@@ -41,82 +51,6 @@ export interface InstrumentMeta {
   pipSize: number;
   decimalPlaces: number;
 }
-
-// Dukascopy symbol alias mapping table to guarantee 100% exact match with dukascopy-node library
-const DUKASCOPY_ALIAS_MAP: Record<string, string> = {
-  // Indices
-  "us30": "usa30idxusd",
-  "usa30": "usa30idxusd",
-  "usa30idxusd": "usa30idxusd",
-  "us500": "usa500idxusd",
-  "usa500": "usa500idxusd",
-  "usa500idxusd": "usa500idxusd",
-  "ustecusd": "usatechidxusd",
-  "usatechidxusd": "usatechidxusd",
-  "nas100": "usatechidxusd",
-  "deidxeur": "deuidxeur",
-  "deuidxeur": "deuidxeur",
-  "ger40": "deuidxeur",
-  "dax40": "deuidxeur",
-  "ukidxgbp": "gbridxgbp",
-  "gbridxgbp": "gbridxgbp",
-  "uk100": "gbridxgbp",
-  "fridxeur": "fraidxeur",
-  "fraidxeur": "fraidxeur",
-  "fra40": "fraidxeur",
-  "jpidxjpy": "jpnidxjpy",
-  "jpnidxjpy": "jpnidxjpy",
-  "jpn225": "jpnidxjpy",
-  "ausidxaud": "ausidxaud",
-  "aus200": "ausidxaud",
-  "euidxeur": "eusidxeur",
-  "eusidxeur": "eusidxeur",
-  "eu50": "eusidxeur",
-  "hkidxhkd": "hkgidxhkd",
-  "hkgidxhkd": "hkgidxhkd",
-  "hk50": "hkgidxhkd",
-  "chnidxcny": "chiidxusd",
-  "chiidxusd": "chiidxusd",
-  "chi50": "chiidxusd",
-
-  // Commodities & Metals
-  "xptusd": "xptcmdusd",
-  "xptcmdusd": "xptcmdusd",
-  "xpdusd": "xpdcmdusd",
-  "xpdcmdusd": "xpdcmdusd",
-  "brent": "brentcmdusd",
-  "brentcmdusd": "brentcmdusd",
-  "wti": "lightcmdusd",
-  "lightcmdusd": "lightcmdusd",
-  "ngas": "gascmdusd",
-  "gascmdusd": "gascmdusd",
-  "copper": "coppercmdusd",
-  "coppercmdusd": "coppercmdusd",
-
-  // Crypto
-  "btc": "btcusd",
-  "btcusd": "btcusd",
-  "eth": "ethusd",
-  "ethusd": "ethusd",
-  "sol": "solusd",
-  "solusd": "solusd",
-  "ltc": "ltcusd",
-  "ltcusd": "ltcusd",
-  "bch": "bchusd",
-  "bchusd": "bchusd",
-  "xrp": "xrpusd",
-  "xrpusd": "xrpusd",
-  "ada": "adausd",
-  "adausd": "adausd",
-  "dot": "dotusd",
-  "dotusd": "dotusd",
-  "link": "linkusd",
-  "linkusd": "linkusd",
-  "doge": "dogeusd",
-  "dogeusd": "dogeusd",
-  "avax": "avaxusd",
-  "avaxusd": "avaxusd",
-};
 
 const SUPPORTED_INSTRUMENTS: InstrumentMeta[] = [
   // Forex Majors
@@ -384,79 +318,6 @@ function getInstrumentCurrenciesForServer(instrument: string): string[] {
 // In-Memory Fast Cache Map
 const memoryCache = new Map<string, any>();
 
-// Timeframes this API can serve.
-// Native Dukascopy timeframes: s1, m1, m5, m15, m30, h1, h4, d1, mn1.
-// Sub-minute timeframes (s5, s15, s30, tick) are built from real s1 tick data.
-// 1W is aggregated from native d1 data.
-const ALLOWED_TIMEFRAMES = new Set([
-  "tick", "s1", "s5", "s15", "s30",
-  "5s", "15s", "30s",
-  "m1", "m5", "m15", "m30",
-  "1m", "5m", "15m", "30m",
-  "h1", "h4",
-  "1h", "4h",
-  "d1", "1d", "1D",
-  "1w", "1W",
-  "mn1",
-]);
-
-const SUB_MINUTE_TIMEFRAMES = new Set(["s1", "s5", "s15", "s30", "tick", "5s", "15s", "30s"]);
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-interface NormalizedTimeframeInfo {
-  canonical: string;
-  isSubMinute: boolean;
-  nativeDukascopyTimeframe: "s1" | "m1" | "m5" | "m15" | "m30" | "h1" | "h4" | "d1" | "mn1";
-  aggregationTarget?: string;
-}
-
-function normalizeRequestedTimeframe(tf: string): NormalizedTimeframeInfo {
-  const clean = tf.toLowerCase().trim();
-  switch (clean) {
-    case "tick":
-      return { canonical: "tick", isSubMinute: true, nativeDukascopyTimeframe: "s1" };
-    case "s1":
-      return { canonical: "s1", isSubMinute: true, nativeDukascopyTimeframe: "s1" };
-    case "s5":
-    case "5s":
-      return { canonical: "s5", isSubMinute: true, nativeDukascopyTimeframe: "s1", aggregationTarget: "s5" };
-    case "s15":
-    case "15s":
-      return { canonical: "s15", isSubMinute: true, nativeDukascopyTimeframe: "s1", aggregationTarget: "s15" };
-    case "s30":
-    case "30s":
-      return { canonical: "s30", isSubMinute: true, nativeDukascopyTimeframe: "s1", aggregationTarget: "s30" };
-    case "m1":
-    case "1m":
-      return { canonical: "m1", isSubMinute: false, nativeDukascopyTimeframe: "m1" };
-    case "m5":
-    case "5m":
-      return { canonical: "m5", isSubMinute: false, nativeDukascopyTimeframe: "m5" };
-    case "m15":
-    case "15m":
-      return { canonical: "m15", isSubMinute: false, nativeDukascopyTimeframe: "m15" };
-    case "m30":
-    case "30m":
-      return { canonical: "m30", isSubMinute: false, nativeDukascopyTimeframe: "m30" };
-    case "h1":
-    case "1h":
-      return { canonical: "h1", isSubMinute: false, nativeDukascopyTimeframe: "h1" };
-    case "h4":
-    case "4h":
-      return { canonical: "h4", isSubMinute: false, nativeDukascopyTimeframe: "h4" };
-    case "d1":
-    case "1d":
-      return { canonical: "d1", isSubMinute: false, nativeDukascopyTimeframe: "d1" };
-    case "1w":
-    case "1w":
-      return { canonical: "1W", isSubMinute: false, nativeDukascopyTimeframe: "d1", aggregationTarget: "1W" };
-    case "mn1":
-      return { canonical: "mn1", isSubMinute: false, nativeDukascopyTimeframe: "mn1" };
-    default:
-      return { canonical: "m1", isSubMinute: false, nativeDukascopyTimeframe: "m1" };
-  }
-}
-
 // In-flight dedup maps: concurrent identical requests share one download.
 const inflightRequests = new Map<string, Promise<{ payload: DownloadPayload }>>();
 const s1BaseInflight = new Map<string, Promise<{ candles: SanitizedCandle[] }>>();
@@ -503,6 +364,18 @@ interface DownloadPayload {
   startTime: string;
   endTime: string;
   candles: SanitizedCandle[];
+  /** Normalized day range this payload answers, echoed back to the client. */
+  requestedFrom?: string;
+  requestedTo?: string;
+  /**
+   * True when `findCoverageProblem` found an interior gap too large to be a
+   * market closure — i.e. an upstream download failed part-way through. Partial
+   * payloads are still returned but are never written to either cache, so the
+   * next request re-downloads instead of replaying the same truncated data.
+   */
+  partial?: boolean;
+  /** Human-readable explanation accompanying `partial`. */
+  warning?: string;
 }
 
 // Node fetch failures wrap their real cause in AggregateError/cause chains
@@ -562,6 +435,80 @@ function sanitizeCandles(rawData: any[]): SanitizedCandle[] {
     });
   }
   return Array.from(timeMap.values()).sort((a, b) => a.time - b.time);
+}
+
+function toMillisCandle(c: SanitizedCandle) {
+  return {
+    timestamp: c.time * 1000,
+    open: c.open,
+    high: c.high,
+    low: c.low,
+    close: c.close,
+    volume: c.volume,
+  };
+}
+
+function toSecondsCandle(c: { timestamp: number; open: number; high: number; low: number; close: number; volume: number }): SanitizedCandle {
+  return {
+    time: c.timestamp / 1000,
+    open: c.open,
+    high: c.high,
+    low: c.low,
+    close: c.close,
+    volume: c.volume,
+  };
+}
+
+/**
+ * Downloads one native Dukascopy timeframe.
+ *
+ * `failAfterRetryCount: false` means a file that 404s or is rate-limited is
+ * skipped rather than aborting the whole pull — required, because weekends and
+ * holidays legitimately have no file. The trade-off is that a *genuine* failure
+ * looks identical to a market closure, which is why every caller runs the result
+ * through `findCoverageProblem` before trusting or caching it.
+ */
+function downloadNative(
+  nativeTf: DukascopyNativeTimeframe,
+  dukascopyInstrument: string,
+  fromDate: string,
+  toDate: string,
+  priceType: "bid" | "ask",
+): Promise<any[]> {
+  return getHistoricalRates({
+    instrument: dukascopyInstrument as any,
+    dates: { from: fromDate, to: toDate },
+    timeframe: nativeTf as any,
+    priceType,
+    format: "json",
+    useCache: true,
+    cacheFolderPath: cacheDir,
+    ignoreFlats: true,
+    batchSize: 30,
+    pauseBetweenBatchesMs: 0,
+    retryCount: 2,
+    pauseBetweenRetriesMs: 1000,
+    failAfterRetryCount: false,
+  });
+}
+
+/**
+ * Drops aggregated buckets that fall entirely outside `[fromDate, toDate)`.
+ *
+ * Only needed when the native range was padded to cover whole buckets: the
+ * padding can pull in one extra bucket on each side, and those are not part of
+ * what the caller asked for.
+ */
+function clipBucketsToRange<T extends { timestamp: number }>(
+  candles: T[],
+  fromDate: string,
+  toDate: string,
+  periodSec: number,
+): T[] {
+  const fromMs = new Date(`${fromDate}T00:00:00Z`).getTime();
+  const toMs = new Date(`${toDate}T00:00:00Z`).getTime();
+  const spanMs = periodSec * 1000;
+  return candles.filter((c) => c.timestamp + spanMs > fromMs && c.timestamp < toMs);
 }
 
 // Load (or fetch once and cache) the real s1 base data for a range. The s1
@@ -698,36 +645,19 @@ function enforceS1CacheLimit(maxBytes = S1_MAX_TOTAL_BYTES): void {
 app.post("/api/download", async (req, res) => {
   const startTimeMs = Date.now();
   try {
-    const { instrument, fromDate, toDate, priceType = "bid", timeframe = "m1" } = req.body;
+    // Normalize and validate once, up front. Everything downstream — the cache
+    // key, the on-disk filename, the sub-minute range cap — derives from these
+    // canonical values rather than from whatever shape the caller sent.
+    const { request, tfInfo } = validateDownloadRequest(
+      (req.body ?? {}) as Record<string, unknown>,
+      (dukascopyInstrument, rawInstrument) =>
+        SUPPORTED_INSTRUMENTS.some((i) => i.id === dukascopyInstrument || i.id === rawInstrument),
+    );
 
-    if (!instrument || !fromDate || !toDate) {
-      return res.status(400).json({ error: "Missing required fields: instrument, fromDate, toDate" });
-    }
-
-    const requestedTimeframeRaw = String(timeframe || "m1").toLowerCase().trim();
-    if (!ALLOWED_TIMEFRAMES.has(requestedTimeframeRaw)) {
-      return res.status(400).json({
-        error: `Unsupported timeframe "${requestedTimeframeRaw}". Allowed: tick, s1, s5, s15, s30, m1, m5, m15, m30, h1, h4, d1, 1w, mn1.`,
-      });
-    }
-
-    const tfInfo = normalizeRequestedTimeframe(requestedTimeframeRaw);
-    const requestedTimeframe = tfInfo.canonical;
-
-    // Sub-minute data is real tick data — enormous to download, so cap ranges.
+    const { fromDate, toDate, priceType, timeframe: requestedTimeframe } = request;
+    const cleanInstrument = request.instrument;
     const isSubMinute = tfInfo.isSubMinute;
-    if (isSubMinute) {
-      const fromTs = new Date(fromDate).getTime();
-      const toTs = new Date(toDate).getTime();
-      const maxDays = getMaxRangeDaysForTimeframe(requestedTimeframe);
-      if (!Number.isNaN(fromTs) && !Number.isNaN(toTs) && toTs - fromTs > maxDays * DAY_MS) {
-        return res.status(400).json({
-          error: `Requested range exceeds the ${maxDays}-day limit for ${requestedTimeframe} data.`,
-        });
-      }
-    }
 
-    const cleanInstrument = String(instrument).toLowerCase().trim();
     const dukascopyInstrument = DUKASCOPY_ALIAS_MAP[cleanInstrument] || cleanInstrument;
 
     const instMeta = SUPPORTED_INSTRUMENTS.find(i => i.id === dukascopyInstrument || i.id === cleanInstrument) || {
@@ -789,90 +719,54 @@ app.post("/api/download", async (req, res) => {
           responseCandles = s1Candles;
         } else {
           // Aggregate real s1 candles up to the requested sub-minute timeframe.
-          const msCandles = s1Candles.map((c) => ({
-            timestamp: c.time * 1000,
-            open: c.open,
-            high: c.high,
-            low: c.low,
-            close: c.close,
-            volume: c.volume,
-          }));
-          responseCandles = aggregateCandles(msCandles, requestedTimeframe).map((c) => ({
-            time: c.timestamp / 1000,
-            open: c.open,
-            high: c.high,
-            low: c.low,
-            close: c.close,
-            volume: c.volume,
-          }));
+          responseCandles = aggregateCandles(
+            s1Candles.map(toMillisCandle),
+            requestedTimeframe,
+          ).map(toSecondsCandle);
         }
-      } else if (tfInfo.aggregationTarget === "1W") {
-        console.log(`[Dukascopy API] Requesting ${dukascopyInstrument} (raw: ${cleanInstrument}) from ${fromDate} to ${toDate} (d1 for 1W)`);
-        const rawData = await withNetworkRetry(
-          () =>
-            getHistoricalRates({
-              instrument: dukascopyInstrument as any,
-              dates: {
-                from: fromDate,
-                to: toDate,
-              },
-              timeframe: "d1",
-              priceType: priceType === "ask" ? "ask" : "bid",
-              format: "json",
-              useCache: true,
-              cacheFolderPath: cacheDir,
-              ignoreFlats: true,
-              batchSize: 30,
-              pauseBetweenBatchesMs: 0,
-              retryCount: 2,
-              pauseBetweenRetriesMs: 1000,
-              failAfterRetryCount: false,
-            }),
-          RETRY_ATTEMPTS,
-          `d1 (for 1W) download for ${cacheKey}`
+      } else if (tfInfo.aggregationTarget) {
+        // Locally aggregated timeframes: h1/h4 from m1, 1W from d1.
+        // h1/h4 deliberately use m1 — see resolveTimeframe() for why the native
+        // hour feed cannot be trusted for the current month.
+        const target = tfInfo.aggregationTarget;
+        const sourceTf = tfInfo.nativeDukascopyTimeframe;
+
+        // Weekly buckets are Monday-anchored, so the bucket containing `from`
+        // normally begins before `from` and the bucket containing `to` ends
+        // after it. Widen the native request by a week on each side so those
+        // edge candles are built from their real days instead of silently
+        // missing the days that fall outside the requested range.
+        const padDays = target === "1W" ? 7 : 0;
+        const sourceFrom = padDays ? shiftDate(fromDate, -padDays) : fromDate;
+        const sourceTo = padDays ? shiftDate(toDate, padDays) : toDate;
+
+        console.log(
+          `[Dukascopy API] Requesting ${dukascopyInstrument} (raw: ${cleanInstrument}) ` +
+          `from ${sourceFrom} to ${sourceTo} (${sourceTf} -> ${target})`
         );
-        const d1Candles = sanitizeCandles(rawData);
-        const msCandles = d1Candles.map((c) => ({
-          timestamp: c.time * 1000,
-          open: c.open,
-          high: c.high,
-          low: c.low,
-          close: c.close,
-          volume: c.volume,
-        }));
-        const weekly = aggregateCandles(msCandles, "1W");
-        responseCandles = weekly.map((c) => ({
-          time: c.timestamp / 1000,
-          open: c.open,
-          high: c.high,
-          low: c.low,
-          close: c.close,
-          volume: c.volume,
-        }));
-        actualTimeframe = "1W";
+        const rawData = await withNetworkRetry(
+          () => downloadNative(sourceTf, dukascopyInstrument, sourceFrom, sourceTo, priceType),
+          RETRY_ATTEMPTS,
+          `${sourceTf} (for ${target}) download for ${cacheKey}`
+        );
+
+        const aggregated = aggregateCandles(
+          sanitizeCandles(rawData).map(toMillisCandle),
+          target,
+        );
+        responseCandles = (padDays
+          ? clipBucketsToRange(aggregated, fromDate, toDate, 604800)
+          : aggregated
+        ).map(toSecondsCandle);
+        // Report the timeframe the caller asked for (h1/h4/1W), not the internal
+        // aggregation target, so the payload matches its cache key and what the
+        // client is holding in `session.timeframe`.
+        actualTimeframe = tfInfo.canonical;
       } else {
         const nativeTf = tfInfo.nativeDukascopyTimeframe;
         console.log(`[Dukascopy API] Requesting ${dukascopyInstrument} (raw: ${cleanInstrument}) from ${fromDate} to ${toDate} (native ${nativeTf})`);
         const rawData = await withNetworkRetry(
-          () =>
-            getHistoricalRates({
-              instrument: dukascopyInstrument as any,
-              dates: {
-                from: fromDate,
-                to: toDate,
-              },
-              timeframe: nativeTf as any,
-              priceType: priceType === "ask" ? "ask" : "bid",
-              format: "json",
-              useCache: true,
-              cacheFolderPath: cacheDir,
-              ignoreFlats: true,
-              batchSize: 30,
-              pauseBetweenBatchesMs: 0,
-              retryCount: 2,
-              pauseBetweenRetriesMs: 1000,
-              failAfterRetryCount: false,
-            }),
+          () => downloadNative(nativeTf, dukascopyInstrument, fromDate, toDate, priceType),
           RETRY_ATTEMPTS,
           `${nativeTf} download for ${cacheKey}`
         );
@@ -890,7 +784,23 @@ app.post("/api/download", async (req, res) => {
       const endTimeISO = new Date(responseCandles[responseCandles.length - 1].time * 1000).toISOString();
       const elapsedMs = Date.now() - startTimeMs;
 
-      console.log(`[Dukascopy API] Processed ${responseCandles.length} ${actualTimeframe} candles for ${cleanInstrument} in ${elapsedMs}ms. Span: ${startTimeISO} to ${endTimeISO}`);
+      // Completeness check. `candles.length > 0` is the only thing this endpoint
+      // used to verify, which is why a download that silently lost a whole
+      // calendar month (a 429 on one file, swallowed by failAfterRetryCount)
+      // looked identical to a successful one — and was then cached, making the
+      // truncated series permanent. A gap larger than any real market closure
+      // means an upstream file is missing.
+      const coverageProblem = findCoverageProblem(
+        responseCandles.map((c) => c.time),
+        actualTimeframe,
+      );
+      const isPartial = coverageProblem !== null;
+
+      console.log(
+        `[Dukascopy API] Processed ${responseCandles.length} ${actualTimeframe} candles for ` +
+        `${cleanInstrument} in ${elapsedMs}ms. Span: ${startTimeISO} to ${endTimeISO}` +
+        (isPartial ? ` [INCOMPLETE: ${coverageProblem!.message}]` : "")
+      );
 
       const payload: DownloadPayload = {
         instrument: instMeta,
@@ -898,15 +808,27 @@ app.post("/api/download", async (req, res) => {
         count: responseCandles.length,
         startTime: startTimeISO,
         endTime: endTimeISO,
+        requestedFrom: fromDate,
+        requestedTo: toDate,
         candles: responseCandles,
+        ...(isPartial ? { partial: true, warning: coverageProblem!.message } : {}),
       };
 
-      // Save to memory cache & disk JSON cache
-      memoryCache.set(cacheKey, payload);
-      try {
-        fs.writeFileSync(processedJsonPath, JSON.stringify(payload));
-      } catch {
-        console.warn(`[Dukascopy API] Could not write disk cache for ${cacheKey}`);
+      // Never cache an incomplete result: doing so is what turned a transient
+      // upstream failure into a permanently broken session. Skipping the write
+      // means the next attempt (or the client's Retry) re-downloads instead.
+      if (isPartial) {
+        console.warn(
+          `[Dukascopy API] Not caching ${cacheKey} — result has a ` +
+          `${(coverageProblem!.largestGapSeconds / 86400).toFixed(1)}-day gap.`
+        );
+      } else {
+        memoryCache.set(cacheKey, payload);
+        try {
+          fs.writeFileSync(processedJsonPath, JSON.stringify(payload));
+        } catch {
+          console.warn(`[Dukascopy API] Could not write disk cache for ${cacheKey}`);
+        }
       }
 
       return { payload };
@@ -919,6 +841,9 @@ app.post("/api/download", async (req, res) => {
     const { payload } = await downloadPromise;
     return res.json({ ...payload, cached: false, latencyMs: Date.now() - startTimeMs });
   } catch (err: any) {
+    if (err instanceof BadRequestError) {
+      return res.status(err.status).json({ error: err.message });
+    }
     if (err instanceof DataNotFoundError) {
       return res.status(404).json({ error: err.message });
     }
