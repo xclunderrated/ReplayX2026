@@ -488,6 +488,50 @@ export function maxLegitimateTailShortfallSeconds(canonicalTimeframe: string): n
   }
 }
 
+/**
+ * Turns a partial-payload report into something worth showing a trader.
+ *
+ * `CoverageProblem.message` is deliberately precise — "the series stops 27.0 days
+ * before the end of the requested range, which is more than the 10-day maximum
+ * expected for h1 data" — because that is what belongs in a log and what you
+ * want when diagnosing a bad download. It is the wrong thing to put in front of
+ * someone trying to review a trade, so the UI gets a short sentence and the exact
+ * text stays in the log.
+ *
+ * Falls back to the server's wording when the structured fields are missing,
+ * which is the case for any payload from a server that predates them.
+ */
+export function describeCoverageProblem(
+  meta: {
+    partial?: boolean;
+    partialKind?: 'interior' | 'tail';
+    partialDays?: number;
+    timeframe?: string;
+    warning?: string;
+  } | null
+  | undefined,
+): string | null {
+  if (!meta?.partial) return null;
+  const days = typeof meta.partialDays === 'number' ? meta.partialDays : null;
+  const tf = meta.timeframe ? `${meta.timeframe} ` : '';
+
+  if (meta.partialKind === 'interior' && days !== null) {
+    return (
+      `Some ${tf}data is missing from the middle of this session (a ${days} ` +
+      `${days === 1 ? 'day' : 'days'} gap). Dukascopy's download failed part-way through, ` +
+      `so trades taken in that window cannot be trusted. Click Retry to fetch it again.`
+    );
+  }
+  if (meta.partialKind === 'tail' && days !== null) {
+    return (
+      `This session's ${tf}data ends ${days} ${days === 1 ? 'day' : 'days'} early. ` +
+      `The download did not return everything up to the end of the range. ` +
+      `Click Retry to fetch it again.`
+    );
+  }
+  return meta.warning ?? null;
+}
+
 export interface CoverageProblem {
   kind: 'interior' | 'tail';
   largestGapSeconds: number;

@@ -121,6 +121,42 @@ test('writeCacheFile actually writes valid JSON', async () => {
   assert.deepEqual(JSON.parse(fs.readFileSync(target, 'utf-8')), { a: 1, b: [2, 3] });
 });
 
+test('the partial-payload warning reads as English, not as a log line', async () => {
+  // The server's `warning` is deliberately precise and belongs in the log. This
+  // guards that the UI-facing message is short and readable, and that it still
+  // falls back to the server string when the structured fields are absent (any
+  // payload from an older server).
+  const { describeCoverageProblem } = await import('../src/lib/dukascopyRequest');
+
+  assert.equal(describeCoverageProblem({ partial: false }), null, 'a complete payload warns about nothing');
+  assert.equal(describeCoverageProblem(null), null);
+
+  const interior = describeCoverageProblem({
+    partial: true, partialKind: 'interior', partialDays: 27, timeframe: 'h1',
+  });
+  assert.ok(interior, 'an interior gap must produce a message');
+  assert.match(interior, /missing from the middle/i);
+  assert.match(interior, /27 days/);
+  assert.ok(!/maximum expected/i.test(interior), 'must not leak the server threshold jargon');
+  assert.ok(interior.length < 220, `banner text should stay short, got ${interior.length} chars`);
+
+  const tail = describeCoverageProblem({
+    partial: true, partialKind: 'tail', partialDays: 1, timeframe: 'm5',
+  });
+  assert.ok(tail, 'a tail shortfall must produce a message');
+  assert.match(tail, /ends 1 day early/);
+
+  // Singular/plural.
+  assert.match(describeCoverageProblem({ partial: true, partialKind: 'tail', partialDays: 1 }) as string, /1 day early/);
+  assert.match(describeCoverageProblem({ partial: true, partialKind: 'tail', partialDays: 3 }) as string, /3 days early/);
+
+  // Fallback for a server that does not send the structured fields.
+  assert.equal(
+    describeCoverageProblem({ partial: true, warning: 'precise server text' }),
+    'precise server text',
+  );
+});
+
 test('the rate limiter refuses a flood but not normal interactive use', () => {
   // Unbounded download volume feeds back into the original bug: Dukascopy
   // rate-limits, a 429 on the hour feed's per-month file is swallowed, and the

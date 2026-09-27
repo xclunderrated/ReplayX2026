@@ -17,6 +17,7 @@ import {
   getMaxRangeDaysForTimeframe,
   TimeframeId,
 } from '../lib/timeframe';
+import { describeCoverageProblem } from '../lib/dukascopyRequest';
 
 interface LoadingState {
   isLoading: boolean;
@@ -204,7 +205,7 @@ export function useSessionLoader() {
         candlesForSession = realCandles;
         loadedSourceTf = requestedTf;
         loadMessage = meta.cached ? 'Loaded from cache' : `Loaded ${realCandles.length} ${requestedTf} candles`;
-        partialWarning = meta.warning ?? null;
+        partialWarning = describeCoverageProblem(meta);
       } else if (isSubMinuteSession && useSyntheticSeconds) {
         setLoadingState({ isLoading: true, progress: 20, error: null, userMessage: 'Fetching 1m base data for synthetic sub-minute...' });
         patchDataState({ progress: 20, userMessage: 'Fetching 1m base data for synthetic sub-minute...' }, session.id);
@@ -226,7 +227,7 @@ export function useSessionLoader() {
         candlesForSession = expandSubMinuteCandlesFromM1(m1Candles, targetTf);
         loadedSourceTf = 'm1';
         loadMessage = meta.cached ? 'Loaded from cache' : `Synthesized ${candlesForSession.length} ${targetTf} candles from 1m`;
-        partialWarning = meta.warning ?? null;
+        partialWarning = describeCoverageProblem(meta);
       } else {
         setLoadingState({ isLoading: true, progress: 20, error: null, userMessage: `Fetching ${session.timeframe} data from Dukascopy...` });
         patchDataState({ progress: 20, userMessage: `Fetching ${session.timeframe} data from Dukascopy...` }, session.id);
@@ -245,7 +246,7 @@ export function useSessionLoader() {
         candlesForSession = downloadedCandles;
         loadedSourceTf = session.timeframe;
         loadMessage = meta.cached ? 'Loaded from cache' : `Loaded ${downloadedCandles.length} ${session.timeframe} candles`;
-        partialWarning = meta.warning ?? null;
+        partialWarning = describeCoverageProblem(meta);
       }
 
       setData(candlesForSession, session.id);

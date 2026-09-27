@@ -376,6 +376,14 @@ interface DownloadPayload {
   partial?: boolean;
   /** Human-readable explanation accompanying `partial`. */
   warning?: string;
+  /**
+   * Structured form of `warning`, so the client can render a short message
+   * without parsing English. `warning` stays precise for the server log and for
+   * any caller that wants the detail.
+   */
+  partialKind?: "interior" | "tail";
+  /** Size of the gap or shortfall, in days. */
+  partialDays?: number;
 }
 
 // Node fetch failures wrap their real cause in AggregateError/cause chains
@@ -944,7 +952,14 @@ app.post("/api/download", async (req, res) => {
         requestedFrom: fromDate,
         requestedTo: toDate,
         candles: responseCandles,
-        ...(isPartial ? { partial: true, warning: coverageProblem!.message } : {}),
+        ...(isPartial
+          ? {
+              partial: true,
+              warning: coverageProblem!.message,
+              partialKind: coverageProblem!.kind,
+              partialDays: Number((coverageProblem!.largestGapSeconds / 86_400).toFixed(1)),
+            }
+          : {}),
       };
 
       // Never cache an incomplete result: doing so is what turned a transient

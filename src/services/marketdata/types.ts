@@ -56,8 +56,16 @@ export interface DownloadResponse {
    * retry re-downloads instead of replaying the same truncated data.
    */
   partial?: boolean;
-  /** Human-readable explanation accompanying `partial`. */
+  /**
+   * Precise explanation accompanying `partial`, phrased for a log. The UI builds
+   * its own short message from the structured fields below rather than showing
+   * this verbatim.
+   */
   warning?: string;
+  /** Which kind of incompleteness was detected. */
+  partialKind?: 'interior' | 'tail';
+  /** Size of the gap or shortfall, in days. */
+  partialDays?: number;
 }
 
 export interface FetchOptions {
