@@ -29,3 +29,8 @@ node
 # Environment secrets (keep .env.example)
 .env
 .env.local
+
+# Google Drive OAuth tokens — a live refresh token for the connected account.
+# Written by the server at runtime; must never reach a public repository.
+.replayx-drive-tokens.json
+.replayx-drive-tokens*.json

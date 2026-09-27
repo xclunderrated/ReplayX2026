@@ -30,7 +30,20 @@ export function loadStoredDriveTokens(): StoredDriveTokens | null {
 
 export function saveStoredDriveTokens(stored: StoredDriveTokens) {
   try {
-    fs.writeFileSync(TOKENS_FILE, JSON.stringify(stored, null, 2), "utf-8");
+    // This file holds a live Google OAuth refresh token for the connected
+    // account. Restrict it to the owner: the default mode would follow the
+    // process umask (typically 0644), leaving it readable by every local user.
+    fs.writeFileSync(TOKENS_FILE, JSON.stringify(stored, null, 2), {
+      encoding: "utf-8",
+      mode: 0o600,
+    });
+    // writeFileSync only applies `mode` when creating the file, so an existing
+    // one written before this fix keeps its old permissions until re-chmodded.
+    try {
+      fs.chmodSync(TOKENS_FILE, 0o600);
+    } catch {
+      // Best effort: unsupported on some Windows filesystems.
+    }
   } catch (err) {
     console.error("[GoogleDrive] Error writing tokens file:", err);
   }
