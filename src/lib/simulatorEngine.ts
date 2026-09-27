@@ -1,4 +1,4 @@
-import { findCandleIndexByTimestamp, getTimeframeIntervalMs, mergeCandles, sortAndDeduplicateCandles } from './timeframe';
+import { findCandleIndexByTimestamp, getTimeframeIntervalMs, mergeCandles, sortAndDeduplicateCandles, auraTimeframeToDukascopy } from './timeframe';
 import { computeTradePnL, computeTradeExcursion, getPipSize } from './orders';
 import { audioFX } from './audioFX';
 
@@ -151,9 +151,22 @@ export function toDateBoundary(dateText: string, endOfDay = false): number {
   return /^\d{4}-\d{2}-\d{2}$/.test(dateText) && endOfDay ? ts + DAY_MS : ts;
 }
 
+/**
+ * Approximate wall-clock spacing of one candle, in milliseconds.
+ *
+ * Monthly has no fixed period, so it uses a nominal 30 days. Every other
+ * timeframe uses its real period, including '1W'.
+ *
+ * This was previously duplicated with subtly different logic in
+ * `TradingViewChart`, and both copies returned a *month* for '1W' — correct
+ * only while 'mn1' was conflated with '1W', which it no longer is. One
+ * definition now lives here and the chart imports it.
+ */
 export function getApproxIntervalMs(timeframe: string): number {
   if (timeframe === 'tick') return 1000;
-  if (timeframe.startsWith('mn') || timeframe === '1W' || timeframe === '1w') return APPROX_MONTH_MS;
+  if (timeframe.startsWith('mn') || auraTimeframeToDukascopy(timeframe) === '1M') {
+    return APPROX_MONTH_MS;
+  }
   return getTimeframeIntervalMs(timeframe);
 }
 

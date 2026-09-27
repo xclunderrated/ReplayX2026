@@ -27,6 +27,18 @@ interface LoadingState {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+/**
+ * Resolves a session date field to a millisecond boundary.
+ *
+ * Deliberately more tolerant than `toDateBoundary` in the engine, which throws
+ * on an unparseable date. The session's dates are optional here (older or
+ * hand-edited persisted state may omit them), so a missing value falls back to a
+ * sensible recent window rather than failing the load.
+ *
+ * That tolerance is why this is not simply the engine's function: it has a
+ * genuinely different contract. The arithmetic for a *valid* `YYYY-MM-DD` is
+ * identical in both, and both treat the end of a bare day as exclusive.
+ */
 function toDateBoundary(dateText?: string, endOfDay = false): number {
   if (!dateText) {
     const now = Date.now();

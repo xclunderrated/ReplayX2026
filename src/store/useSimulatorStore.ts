@@ -2481,6 +2481,11 @@ export const useSimulatorStore = create<SimulatorState>()(
             progress: 0,
             activeLoadKind: null,
             error: null,
+            // Transient, describes the load that produced data we did not
+            // persist. Persisting it would write a stale warning to local
+            // storage and could resurface it on a session that reloads cleanly.
+            dataWarning: null,
+            userMessage: null,
           },
         }))
       })

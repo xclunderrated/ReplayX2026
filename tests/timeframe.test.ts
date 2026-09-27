@@ -13,7 +13,11 @@ import {
   auraTimeframeToDukascopy,
   dukascopyTimeframeToAura,
 } from '../src/lib/timeframe';
+import { getApproxIntervalMs, toDateBoundary } from '../src/lib/simulatorEngine';
 import { WEEKLY_MONDAY_OFFSET_SEC } from '../src/lib/candleAggregator';
+
+const DAY_MS = 86_400_000;
+const MONTH_MS = 30 * DAY_MS;
 
 test('sortAndDeduplicateCandles drops corrupted candles and preserves identical overlap once', () => {
   const duplicate = { timestamp: 1_000, open: 1.1, high: 1.2, low: 1.0, close: 1.15, volume: 10 };
@@ -275,6 +279,56 @@ test('aggregateCandles refuses to derive finer candles from coarser data', () =>
   // m1 -> s5/s15/s30 is impossible without fabrication — no data, not guesses.
   assert.deepEqual(aggregateCandles(m1Candles, 's5'), []);
   assert.deepEqual(aggregateCandles(m1Candles, 's30'), []);
+});
+
+test('getApproxIntervalMs is exact for every real period and nominal only for monthly', () => {
+  // This was duplicated in TradingViewChart with different logic, and both
+  // copies returned a *month* for '1W' — harmless only while 'mn1' was
+  // conflated with '1W'. Pin every id so an aliasing mistake fails loudly.
+  const expected: Record<string, number> = {
+    tick: 1000,
+    s5: 5_000,
+    s15: 15_000,
+    s30: 30_000,
+    m1: 60_000,
+    '1m': 60_000,
+    m5: 300_000,
+    m15: 900_000,
+    m30: 1_800_000,
+    h1: 3_600_000,
+    '1h': 3_600_000,
+    h4: 14_400_000,
+    '4h': 14_400_000,
+    d1: DAY_MS,
+    '1D': DAY_MS,
+    '1d': DAY_MS,
+    // A week is seven days. It used to report a month here.
+    '1W': 7 * DAY_MS,
+    '1w': 7 * DAY_MS,
+    // Monthly has no fixed period, so it is nominal.
+    mn1: MONTH_MS,
+    '1M': MONTH_MS,
+  };
+  for (const [tf, ms] of Object.entries(expected)) {
+    assert.equal(getApproxIntervalMs(tf), ms, `getApproxIntervalMs('${tf}')`);
+  }
+  assert.equal(getApproxIntervalMs('1W'), 7 * DAY_MS, 'weekly must not be a month');
+  assert.notEqual(getApproxIntervalMs('1W'), getApproxIntervalMs('mn1'), 'week != month');
+});
+
+test('toDateBoundary treats the end of a bare day as exclusive', () => {
+  const start = toDateBoundary('2026-08-27');
+  const end = toDateBoundary('2026-08-27', true);
+  assert.equal(new Date(start).toISOString(), '2026-08-27T00:00:00.000Z');
+  assert.equal(new Date(end).toISOString(), '2026-08-28T00:00:00.000Z');
+  assert.equal(end - start, DAY_MS);
+
+  // A full ISO timestamp is already a point in time, so endOfDay must not shift it.
+  const precise = toDateBoundary('2026-08-27T13:45:00Z', true);
+  assert.equal(new Date(precise).toISOString(), '2026-08-27T13:45:00.000Z');
+
+  // Unparseable input is loud, not silently reinterpreted as "now".
+  assert.throws(() => toDateBoundary('not-a-date'), /Invalid session date/);
 });
 
 test('expandSubMinuteCandlesFromM1 synthesizes sub-minute candles from 1m (legacy mode)', () => {

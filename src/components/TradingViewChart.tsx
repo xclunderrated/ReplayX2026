@@ -4,7 +4,8 @@ import { useSimulatorStore, Trade, Candle } from '../store/useSimulatorStore';
 import { useShallow } from 'zustand/react/shallow';
 import { downloadMarketData } from '../services/marketdata';
 import { newsService } from '../services/newsService';
-import { getTimeframeIntervalMs, aggregateCandles, auraTimeframeToDukascopy, expandSubMinuteCandlesFromM1 } from '../lib/timeframe';
+import { aggregateCandles, auraTimeframeToDukascopy, expandSubMinuteCandlesFromM1 } from '../lib/timeframe';
+import { getApproxIntervalMs, toDateBoundary } from '../lib/simulatorEngine';
 import { type NewsEvent, filterNewsForCurrentView, getImpactColor, getImpactLabel, getImpactWeight, getWeekRangeKeys, matchesNewsImpactFilter } from '../lib/news';
 import { buildNewsWhitespacePoints, clearTimestampCache, getNewsRenderState, resolveMarkerTime, resolveVisibleTimestamp, WHITESPACE_FUTURE_BARS } from '../lib/chartMarkers';
 import { formatTimestampInTimeZone, rawTimeToChartTime, timestampMsToChartTime, chartTimeToRawTime } from '../lib/timezone';
@@ -87,21 +88,13 @@ function areRenderedNewsItemsEqual(left: ChartNewsOverlayItem[], right: ChartNew
   return true;
 }
 
-function toDateBoundary(dateText: string, endOfDay = false): number {
-  const ts = new Date(dateText).getTime();
-  if (!Number.isFinite(ts)) {
-    return Date.now();
-  }
-
-  return /^\d{4}-\d{2}-\d{2}$/.test(dateText) && endOfDay ? ts + DAY_MS : ts;
-}
-
-function getApproxIntervalMs(timeframe: string): number {
-  if (timeframe === 'tick') return 1000;
-  const parsed = auraTimeframeToDukascopy(timeframe);
-  if (parsed === '1W') return APPROX_MONTH_MS;
-  return getTimeframeIntervalMs(parsed);
-}
+// `getApproxIntervalMs` and `toDateBoundary` come from the engine rather than
+// being redefined here.
+//
+// The local copies had drifted. `getApproxIntervalMs` returned a month for '1W'
+// and ignored 'tick'. `toDateBoundary`'s local version also had a dead fallback
+// that silently returned `Date.now()` for an unparseable date, so a corrupt
+// session date would collapse the viewport window instead of surfacing.
 
 function getViewportLoadWindowMs(timeframe: string): number {
   const parsed = auraTimeframeToDukascopy(timeframe);
