@@ -318,6 +318,18 @@ function getInstrumentCurrenciesForServer(instrument: string): string[] {
 // In-Memory Fast Cache Map
 const memoryCache = new Map<string, any>();
 
+/**
+ * Bumped whenever a change alters how a payload is produced, so cached entries
+ * written by an older pipeline are not served after the fact.
+ *
+ * The processed files in `.dukascopy-cache` are derived data whose filenames are
+ * part of the cache key. Without this, any change to the transformation — an
+ * aggregation base, a Monday week anchor, the `ignoreFlats` policy — silently
+ * keeps serving entries computed the old way, which is exactly how a truncated
+ * or lossy result outlives the fix for it.
+ */
+const CACHE_PIPELINE_VERSION = 3;
+
 // In-flight dedup maps: concurrent identical requests share one download.
 const inflightRequests = new Map<string, Promise<{ payload: DownloadPayload }>>();
 const s1BaseInflight = new Map<string, Promise<{ candles: SanitizedCandle[] }>>();
@@ -467,6 +479,10 @@ function toSecondsCandle(c: { timestamp: number; open: number; high: number; low
  * holidays legitimately have no file. The trade-off is that a *genuine* failure
  * looks identical to a market closure, which is why every caller runs the result
  * through `findCoverageProblem` before trusting or caching it.
+ *
+ * `ignoreFlats` is enabled only for the sub-second feeds. On the daily feed it
+ * discards real flat weekday sessions for equities, which silently corrupts the
+ * weekly candles built from them — see `dropFlatWeekendBars`.
  */
 function downloadNative(
   nativeTf: DukascopyNativeTimeframe,
@@ -475,6 +491,7 @@ function downloadNative(
   toDate: string,
   priceType: "bid" | "ask",
 ): Promise<any[]> {
+  const isSubSecond = nativeTf === "s1";
   return getHistoricalRates({
     instrument: dukascopyInstrument as any,
     dates: { from: fromDate, to: toDate },
@@ -483,7 +500,7 @@ function downloadNative(
     format: "json",
     useCache: true,
     cacheFolderPath: cacheDir,
-    ignoreFlats: true,
+    ignoreFlats: isSubSecond,
     batchSize: 30,
     pauseBetweenBatchesMs: 0,
     retryCount: 2,
@@ -511,6 +528,36 @@ function clipBucketsToRange<T extends { timestamp: number }>(
   return candles.filter((c) => c.timestamp + spanMs > fromMs && c.timestamp < toMs);
 }
 
+/**
+ * Drops Dukascopy's flat weekend placeholder bars.
+ *
+ * These exist for markets that are closed all weekend: a Saturday (and, for
+ * equities, a Sunday) bar with O=H=L=C carrying the last close. They are noise
+ * in a chart and contribute nothing to a weekly candle.
+ *
+ * This replaces `ignoreFlats` for the daily feed, which was doing the same job
+ * far too aggressively. Measured over 2025-01-01..2026-09-27:
+ *
+ *   eurusd        90 dropped, all Saturday                      -> weekly OHLC unchanged
+ *   btcusd         0 dropped (trades weekends)                  -> unchanged
+ *   xauusd        92 dropped (90 Sat, 2 Fri)                    -> weekly OHLC unchanged
+ *   usa500idxusd  92 dropped (90 Sat, 2 Fri)                    -> weekly OHLC unchanged
+ *   aaplususd    199 dropped (90 Sat, 90 Sun, 19 weekdays)     -> 9 weekly candles WRONG
+ *
+ * For equities, `ignoreFlats` also discards flat *weekday* bars — a quiet or
+ * halted session is real information — and in 3 cases the discarded bar sat
+ * outside its week's range, so it was extending the weekly high or low. That
+ * made the 1W candles wrong. Restricting the filter to flat bars that also fall
+ * on a weekend keeps every real session and removes only the placeholders.
+ */
+function dropFlatWeekendBars(candles: SanitizedCandle[]): SanitizedCandle[] {
+  return candles.filter((c) => {
+    if (c.open !== c.high || c.high !== c.low || c.low !== c.close) return true;
+    const weekday = new Date(c.time * 1000).getUTCDay();
+    return weekday !== 0 && weekday !== 6;
+  });
+}
+
 // Load (or fetch once and cache) the real s1 base data for a range. The s1
 // base is the shared source for s5/s15/s30/tick — like m1 is the shared base
 // for 5m/15m/1h — so switching sub-minute timeframes reuses one tick download
@@ -523,7 +570,7 @@ function loadS1Base(
   priceType: string,
   instMeta: any
 ): Promise<{ candles: SanitizedCandle[] }> {
-  const baseKey = `${dukascopyInstrument}_${fromDate}_${toDate}_${priceType}_s1`;
+  const baseKey = `v${CACHE_PIPELINE_VERSION}_${dukascopyInstrument}_${fromDate}_${toDate}_${priceType}_s1`;
 
   if (s1BaseInflight.has(baseKey)) {
     console.log(`[Dukascopy API] s1 base request joined: ${baseKey}`);
@@ -700,7 +747,7 @@ app.post("/api/download", async (req, res) => {
       decimalPlaces: cleanInstrument.includes("jpy") ? 3 : 5,
     };
 
-    const cacheKey = `${dukascopyInstrument}_${fromDate}_${toDate}_${priceType}_${requestedTimeframe}`;
+    const cacheKey = `v${CACHE_PIPELINE_VERSION}_${dukascopyInstrument}_${fromDate}_${toDate}_${priceType}_${requestedTimeframe}`;
     const processedJsonPath = path.join(cacheDir, `processed_${cacheKey}.json`);
 
     // 1. Check in-memory cache first (0ms instant)
@@ -802,7 +849,7 @@ app.post("/api/download", async (req, res) => {
         );
 
         const aggregated = aggregateCandles(
-          sanitizeCandles(rawData).map(toMillisCandle),
+          dropFlatWeekendBars(sanitizeCandles(rawData)).map(toMillisCandle),
           target,
         );
         responseCandles = (padDays
@@ -821,7 +868,8 @@ app.post("/api/download", async (req, res) => {
           RETRY_ATTEMPTS,
           `${nativeTf} download for ${cacheKey}`
         );
-        responseCandles = sanitizeCandles(rawData);
+        const nativeCandles = sanitizeCandles(rawData);
+        responseCandles = nativeTf === "d1" ? dropFlatWeekendBars(nativeCandles) : nativeCandles;
         actualTimeframe = tfInfo.canonical;
       }
 

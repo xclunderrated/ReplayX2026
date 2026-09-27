@@ -7,12 +7,22 @@ import {
   findLargestInteriorGapSeconds,
   isSupportedTimeframe,
   maxLegitimateGapSeconds,
+  maxLegitimateTailShortfallSeconds,
   normalizeDateParam,
   normalizePriceType,
   resolveTimeframe,
   shiftDate,
   validateDownloadRequest,
 } from '../src/lib/dukascopyRequest';
+
+/** Mirrors `dropFlatWeekendBars` in server.ts. */
+function dropFlatWeekendBars(candles: Array<{ time: number; open: number; high: number; low: number; close: number }>) {
+  return candles.filter((c) => {
+    if (c.open !== c.high || c.high !== c.low || c.low !== c.close) return true;
+    const weekday = new Date(c.time * 1000).getUTCDay();
+    return weekday !== 0 && weekday !== 6;
+  });
+}
 
 const DAY_SEC = 86_400;
 
@@ -391,4 +401,60 @@ test('a healthy dense series never trips the guard', () => {
   const times: number[] = [];
   for (let i = 0; i < 500; i++) times.push(Date.UTC(2026, 7, 1) / 1000 + i * 900);
   assert.equal(findCoverageProblem(times, 'm15'), null);
+});
+
+test('the weekend filter drops placeholders but keeps real flat sessions', () => {
+  // Dukascopy emits flat O=H=L=C bars for weekend closures. `ignoreFlats` was
+  // removing those, but it also removed flat *weekday* sessions — for equities
+  // that silently corrupted 9 of 91 weekly candles, because the discarded bar
+  // was extending the week's high or low.
+  const at = (iso: string) => {
+    const t = Date.parse(iso) / 1000;
+    return { time: t, open: 100, high: 100, low: 100, close: 100 };
+  };
+  const saturday = at('2026-08-01T00:00:00Z');   // Saturday, flat placeholder
+  const sunday = at('2026-08-02T00:00:00Z');     // Sunday, flat placeholder (equities)
+  const mondayFlat = at('2026-08-03T00:00:00Z'); // Monday, flat but REAL (halted/quiet)
+  const tuesday = {
+    time: Date.parse('2026-08-04T00:00:00Z') / 1000,
+    open: 100, high: 105, low: 99, close: 104,
+  };
+
+  assert.equal(new Date(saturday.time * 1000).getUTCDay(), 6);
+  assert.equal(new Date(sunday.time * 1000).getUTCDay(), 0);
+  assert.equal(new Date(mondayFlat.time * 1000).getUTCDay(), 1);
+
+  const kept = dropFlatWeekendBars([saturday, sunday, mondayFlat, tuesday]);
+  const times = kept.map((c) => c.time);
+  assert.equal(times.includes(saturday.time), false, 'Saturday placeholder dropped');
+  assert.equal(times.includes(sunday.time), false, 'Sunday placeholder dropped');
+  assert.equal(times.includes(mondayFlat.time), true, 'flat Monday session kept');
+  assert.equal(times.includes(tuesday.time), true, 'normal session kept');
+});
+
+test('a weekend placeholder outside the week range is the case that mattered', () => {
+  // Regression shape: a dropped bar whose price sits outside the surrounding
+  // week's high/low. Keeping flat weekday bars means the weekly candle can no
+  // longer lose its extreme to the filter.
+  const mon = { time: Date.parse('2026-08-03T00:00:00Z') / 1000, open: 100, high: 104, low: 96, close: 103 };
+  const tue = { time: Date.parse('2026-08-04T00:00:00Z') / 1000, open: 103, high: 108, low: 102, close: 107 };
+  const wedFlatHigh = { time: Date.parse('2026-08-05T00:00:00Z') / 1000, open: 107, high: 107, low: 107, close: 107 };
+  // Would have extended the weekly high from 108 to 112 if dropped.
+  const thuFlatLow = { time: Date.parse('2026-08-06T00:00:00Z') / 1000, open: 90, high: 90, low: 90, close: 90 };
+
+  const all = [mon, tue, wedFlatHigh, thuFlatLow];
+  const kept = dropFlatWeekendBars(all);
+  assert.equal(kept.length, 4, 'all four are weekdays, so all are kept');
+  const high = Math.max(...kept.map((c) => c.high));
+  const low = Math.min(...kept.map((c) => c.low));
+  assert.equal(high, 108, 'flat weekday high is retained');
+  assert.equal(low, 90, 'flat weekday low is retained');
+});
+
+test('tail tolerance is looser for coarse timeframes than for intraday', () => {
+  assert.equal(maxLegitimateTailShortfallSeconds('m15'), 10 * DAY_SEC);
+  assert.equal(maxLegitimateTailShortfallSeconds('h1'), 10 * DAY_SEC);
+  assert.equal(maxLegitimateTailShortfallSeconds('1W'), 14 * DAY_SEC);
+  // A monthly series is stamped on the 1st, so ending on the 29th is normal.
+  assert.equal(maxLegitimateTailShortfallSeconds('mn1'), 45 * DAY_SEC);
 });
